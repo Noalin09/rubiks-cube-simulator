@@ -3,49 +3,49 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Three.js 終極魔術方塊模擬器</title>
+    <title>Three.js 終極魔術方塊 - 修復增強版</title>
     <style>
-        :root { --primary: #3498db; --bg: #111; --text: #eee; }
-        body.light-mode { --bg: #f0f0f0; --text: #222; }
-        body { margin: 0; overflow: hidden; background-color: var(--bg); color: var(--text); font-family: 'Segoe UI', sans-serif; transition: background 0.3s; }
+        :root { --primary: #3498db; --bg: #1a1a1a; --text: #eee; }
+        body { margin: 0; overflow: hidden; background-color: var(--bg); color: var(--text); font-family: sans-serif; }
         canvas { display: block; }
 
         /* UI Panel */
-        #ui-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; padding: 20px; box-sizing: border-box; display: flex; flex-direction: column; justify-content: space-between; }
-        .panel { pointer-events: auto; background: rgba(0,0,0,0.7); backdrop-filter: blur(10px); padding: 15px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1); }
-        .light-mode .panel { background: rgba(255,255,255,0.8); color: #222; border: 1px solid rgba(0,0,0,0.1); }
+        #ui-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; padding: 15px; display: flex; flex-direction: column; justify-content: space-between; }
+        .panel { pointer-events: auto; background: rgba(0,0,0,0.8); backdrop-filter: blur(8px); padding: 12px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.1); }
         
-        .stats { position: absolute; top: 20px; right: 20px; text-align: right; }
-        .controls { display: flex; flex-direction: column; gap: 10px; width: 220px; }
-        .btn-group { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 5px; }
+        .controls { width: 200px; display: flex; flex-direction: column; gap: 8px; }
+        .stats { position: absolute; top: 15px; right: 15px; text-align: right; }
+        .btn-group { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 4px; }
         
-        button { background: #444; color: white; border: none; padding: 8px; border-radius: 4px; cursor: pointer; font-size: 12px; transition: 0.2s; }
-        button:hover { background: var(--primary); }
-        button.active { background: var(--primary); }
-        h3 { margin: 0 0 10px 0; font-size: 16px; border-bottom: 1px solid #555; padding-bottom: 5px; }
-        .timer { font-size: 24px; font-weight: bold; font-family: monospace; }
+        button { background: #333; color: white; border: 1px solid #555; padding: 6px; border-radius: 4px; cursor: pointer; font-size: 11px; }
+        button:hover { background: var(--primary); border-color: var(--primary); }
+        button.active { background: var(--primary); border-color: white; }
+        h4 { margin: 5px 0; font-size: 13px; color: #aaa; text-transform: uppercase; }
+        .timer { font-size: 22px; font-weight: bold; font-family: monospace; color: var(--primary); }
+        .hint { font-size: 10px; color: #666; margin-top: 5px; }
     </style>
 </head>
 <body>
 
 <div id="ui-overlay">
     <div class="controls panel">
-        <h3>1. 選擇階數</h3>
+        <h4>1. 階數選擇</h4>
         <div class="btn-group">
-            <button onclick="changeOrder(2)">2x2</button>
-            <button class="active" onclick="changeOrder(3)">3x3</button>
-            <button onclick="changeOrder(4)">4x4</button>
+            <button data-cmd="order" data-val="2">2x2</button>
+            <button data-cmd="order" data-val="3" class="active">3x3</button>
+            <button data-cmd="order" data-val="4">4x4</button>
         </div>
 
-        <h3>2. 動作控制</h3>
-        <button onclick="scramble()">隨機打亂 (Scramble)</button>
-        <button onclick="undo()">悔步 (Undo)</button>
-        <button onclick="resetCube()">重置方塊 (Reset)</button>
+        <h4>2. 工具</h4>
+        <button data-cmd="scramble">打亂方塊 (Scramble)</button>
+        <button data-cmd="undo">悔步 (Undo)</button>
+        <button data-cmd="reset">重置 (Reset)</button>
 
-        <h3>3. 視覺與系統</h3>
-        <button onclick="toggleWireframe()">透視模式 (Wireframe)</button>
-        <button onclick="resetCamera()">視角重置</button>
-        <button onclick="toggleTheme()">切換主題 (Dark/Light)</button>
+        <h4>3. 系統</h4>
+        <button data-cmd="wireframe">透視模式</button>
+        <button data-cmd="camera">視角重置</button>
+        <button data-cmd="theme">深/淺色切換</button>
+        <div class="hint">鍵盤: U, D, L, R, F, B 轉動</div>
     </div>
 
     <div class="stats panel">
@@ -54,11 +54,12 @@
     </div>
 </div>
 
+<!-- 使用穩定版 CDN 並包含所有依賴 -->
 <script type="importmap">
     {
         "imports": {
-            "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
-            "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/",
+            "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+            "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/",
             "gsap": "https://cdn.jsdelivr.net/npm/gsap@3.12.2/index.js"
         }
     }
@@ -69,42 +70,238 @@
     import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
     import gsap from 'gsap';
 
-    let scene, camera, renderer, controls;
-    let cubeGroup, currentOrder = 3;
+    // --- 全域變數 ---
+    let scene, camera, renderer, controls, cubeGroup;
+    let currentOrder = 3;
     let isAnimating = false;
+    let isWireframe = false;
     let moveHistory = [];
     let moveCounter = 0;
-    let timerInterval, startTime, isTimerRunning = false;
-    let isWireframe = false;
+    let timerInterval, startTime, isTimerStarted = false;
 
     const COLORS = {
         top: 0xffd500, bottom: 0xffffff, front: 0xb7121f,
-        back: 0xff5800, left: 0x0046ad, right: 0x009b48, inside: 0x222222
+        back: 0xff5800, left: 0x0046ad, right: 0x009b48, inside: 0x111111
     };
 
+    // --- 初始化 ---
     init();
     animate();
 
     function init() {
         scene = new THREE.Scene();
-        scene.background = new THREE.Color(0x111111);
+        scene.background = new THREE.Color(0x1a1a1a);
 
         camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
-        resetCamera();
+        camera.position.set(6, 6, 10);
 
         renderer = new THREE.WebGLRenderer({ antialias: true });
         renderer.setSize(window.innerWidth, window.innerHeight);
-        renderer.setPixelRatio(window.devicePixelRatio);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
         document.body.appendChild(renderer.domElement);
 
         controls = new OrbitControls(camera, renderer.domElement);
         controls.enableDamping = true;
 
-        const ambientLight = new THREE.AmbientLight(0xffffff, 1.2);
+        // 增強光照，確保方塊清晰
+        const ambientLight = new THREE.AmbientLight(0xffffff, 1.0);
         scene.add(ambientLight);
+        const sunLight = new THREE.DirectionalLight(0xffffff, 1.2);
+        sunLight.position.set(10, 20, 10);
+        scene.add(sunLight);
 
         createCube(currentOrder);
+        setupEventListeners();
+    }
 
+    // --- 核心功能：建立魔方 ---
+    function createCube(order) {
+        if (cubeGroup) scene.remove(cubeGroup);
+        cubeGroup = new THREE.Group();
+        
+        const offset = (order - 1) / 2;
+        const spacing = 1.0; 
+        const geometry = new THREE.BoxGeometry(0.96, 0.96, 0.96);
+
+        for (let x = 0; x < order; x++) {
+            for (let y = 0; y < order; y++) {
+                for (let z = 0; z < order; z++) {
+                    const materials = [
+                        new THREE.MeshStandardMaterial({ color: (x === order - 1) ? COLORS.right : COLORS.inside }),
+                        new THREE.MeshStandardMaterial({ color: (x === 0) ? COLORS.left : COLORS.inside }),
+                        new THREE.MeshStandardMaterial({ color: (y === order - 1) ? COLORS.top : COLORS.inside }),
+                        new THREE.MeshStandardMaterial({ color: (y === 0) ? COLORS.bottom : COLORS.inside }),
+                        new THREE.MeshStandardMaterial({ color: (z === order - 1) ? COLORS.front : COLORS.inside }),
+                        new THREE.MeshStandardMaterial({ color: (z === 0) ? COLORS.back : COLORS.inside })
+                    ];
+
+                    const cubie = new THREE.Mesh(geometry, materials);
+                    // 關鍵：精確計算位置
+                    cubie.position.set(x - offset, y - offset, z - offset);
+                    cubie.userData.originalPos = cubie.position.clone();
+                    cubeGroup.add(cubie);
+                }
+            }
+        }
+        scene.add(cubeGroup);
+    }
+
+    // --- 旋轉邏輯（修復浮點數 bug） ---
+    async function rotateLayer(axis, layerIndex, angle, isUndo = false) {
+        if (isAnimating) return;
+        isAnimating = true;
+
+        if (!isTimerStarted && !isUndo) startTimer();
+
+        const pivot = new THREE.Group();
+        scene.add(pivot);
+
+        const offset = (currentOrder - 1) / 2;
+        const targetCoord = layerIndex - offset;
+
+        // 選取符合該層座標的小方塊（加入小量誤差容許值 0.1）
+        const targets = [];
+        const children = [...cubeGroup.children];
+        children.forEach(cubie => {
+            if (Math.abs(cubie.position[axis] - targetCoord) < 0.1) {
+                targets.push(cubie);
+                pivot.attach(cubie);
+            }
+        });
+
+        await gsap.to(pivot.rotation, {
+            [axis]: angle,
+            duration: 0.35,
+            ease: "power2.inOut"
+        });
+
+        // 動畫結束，放回群組並「強制校正」座標
+        targets.forEach(cubie => {
+            cubeGroup.attach(cubie);
+            cubie.position.x = Math.round(cubie.position.x * 2) / 2;
+            cubie.position.y = Math.round(cubie.position.y * 2) / 2;
+            cubie.position.z = Math.round(cubie.position.z * 2) / 2;
+            // 同時校正旋轉，避免萬向鎖誤差累積
+            cubie.rotation.set(
+                Math.round(cubie.rotation.x / (Math.PI/2)) * (Math.PI/2),
+                Math.round(cubie.rotation.y / (Math.PI/2)) * (Math.PI/2),
+                Math.round(cubie.rotation.z / (Math.PI/2)) * (Math.PI/2)
+            );
+        });
+
+        scene.remove(pivot);
+        if (!isUndo) {
+            moveHistory.push({ axis, layerIndex, angle });
+            moveCounter++;
+            updateUI();
+        }
+        isAnimating = false;
+    }
+
+    // --- UI 與 事件處理 ---
+    function setupEventListeners() {
+        // 按鈕監聽
+        document.querySelectorAll('button[data-cmd]').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const cmd = btn.dataset.cmd;
+                const val = btn.dataset.val;
+
+                if (cmd === 'order') {
+                    document.querySelectorAll('button[data-cmd="order"]').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    currentOrder = parseInt(val);
+                    resetAll();
+                } else if (cmd === 'scramble') {
+                    scramble();
+                } else if (cmd === 'undo') {
+                    undo();
+                } else if (cmd === 'reset') {
+                    resetAll();
+                } else if (cmd === 'wireframe') {
+                    isWireframe = !isWireframe;
+                    cubeGroup.children.forEach(c => c.material.forEach(m => m.wireframe = isWireframe));
+                } else if (cmd === 'camera') {
+                    gsap.to(camera.position, { x: 6, y: 6, z: 10, duration: 1, onUpdate: () => camera.lookAt(0,0,0) });
+                } else if (cmd === 'theme') {
+                    const isDark = scene.background.getHex() === 0x1a1a1a;
+                    scene.background.set(isDark ? 0xdddddd : 0x1a1a1a);
+                }
+            });
+        });
+
+        // 鍵盤監聽
+        window.addEventListener('keydown', (e) => {
+            const k = e.key.toUpperCase();
+            const lastIdx = currentOrder - 1;
+            const moveMap = {
+                'U': ['y', lastIdx, -Math.PI/2], 'D': ['y', 0, Math.PI/2],
+                'L': ['x', 0, Math.PI/2], 'R': ['x', lastIdx, -Math.PI/2],
+                'F': ['z', lastIdx, -Math.PI/2], 'B': ['z', 0, Math.PI/2]
+            };
+            if (moveMap[k]) rotateLayer(...moveMap[k]);
+        });
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+    }
+
+    function resetAll() {
+        moveHistory = [];
+        moveCounter = 0;
+        isTimerStarted = false;
+        clearInterval(timerInterval);
+        document.getElementById('timer').innerText = "00:00.0";
+        updateUI();
+        createCube(currentOrder);
+    }
+
+    async function scramble() {
+        if (isAnimating) return;
+        resetAll();
+        const axes = ['x', 'y', 'z'];
+        for (let i = 0; i < 12; i++) {
+            const axis = axes[Math.floor(Math.random() * 3)];
+            const layer = Math.floor(Math.random() * currentOrder);
+            const angle = Math.random() > 0.5 ? Math.PI/2 : -Math.PI/2;
+            await rotateLayer(axis, layer, angle);
+        }
+    }
+
+    function undo() {
+        if (moveHistory.length === 0 || isAnimating) return;
+        const last = moveHistory.pop();
+        rotateLayer(last.axis, last.layerIndex, -last.angle, true);
+        moveCounter--;
+        updateUI();
+    }
+
+    function startTimer() {
+        isTimerStarted = true;
+        startTime = Date.now();
+        timerInterval = setInterval(() => {
+            const d = Date.now() - startTime;
+            const m = Math.floor(d / 60000);
+            const s = Math.floor((d % 60000) / 1000);
+            const ms = Math.floor((d % 1000) / 100);
+            document.getElementById('timer').innerText = `${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}.${ms}`;
+        }, 100);
+    }
+
+    function updateUI() {
+        document.getElementById('move-count').innerText = `步數: ${moveCounter}`;
+    }
+
+    function animate() {
+        requestAnimationFrame(animate);
+        if (controls) controls.update();
+        renderer.render(scene, camera);
+    }
+</script>
+</body>
+</html>
         window.addEventListener('resize', onWindowResize);
         window.addEventListener('keydown', handleKeyboard);
         
