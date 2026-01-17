@@ -2,59 +2,77 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Three.js 終極魔術方塊 - 修復增強版</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Ultimate Rubik's Lab - Pro Edition</title>
     <style>
-        :root { --primary: #3498db; --bg: #1a1a1a; --text: #eee; }
-        body { margin: 0; overflow: hidden; background-color: var(--bg); color: var(--text); font-family: sans-serif; }
-        canvas { display: block; }
+        :root { --primary: #00d2ff; --accent: #3a7bd5; --bg: #0f172a; --panel: rgba(15, 23, 42, 0.9); }
+        body { margin: 0; overflow: hidden; background: radial-gradient(circle at center, #1e293b 0%, #0f172a 100%); color: #f8fafc; font-family: 'Inter', system-ui, sans-serif; }
+        canvas { display: block; touch-action: none; }
 
-        /* UI Panel */
-        #ui-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; padding: 15px; display: flex; flex-direction: column; justify-content: space-between; }
-        .panel { pointer-events: auto; background: rgba(0,0,0,0.8); backdrop-filter: blur(8px); padding: 12px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.1); }
+        /* UI Overlay */
+        #app-ui { position: absolute; inset: 0; pointer-events: none; display: flex; flex-direction: column; justify-content: space-between; padding: 20px; }
+        .panel { pointer-events: auto; background: var(--panel); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.1); border-radius: 16px; padding: 16px; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.3); }
         
-        .controls { width: 200px; display: flex; flex-direction: column; gap: 8px; }
-        .stats { position: absolute; top: 15px; right: 15px; text-align: right; }
-        .btn-group { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 4px; }
+        /* Sidebar */
+        .sidebar { width: 220px; display: flex; flex-direction: column; gap: 12px; }
+        .stats-box { position: absolute; top: 20px; right: 20px; min-width: 120px; text-align: right; }
         
-        button { background: #333; color: white; border: 1px solid #555; padding: 6px; border-radius: 4px; cursor: pointer; font-size: 11px; }
-        button:hover { background: var(--primary); border-color: var(--primary); }
-        button.active { background: var(--primary); border-color: white; }
-        h4 { margin: 5px 0; font-size: 13px; color: #aaa; text-transform: uppercase; }
-        .timer { font-size: 22px; font-weight: bold; font-family: monospace; color: var(--primary); }
-        .hint { font-size: 10px; color: #666; margin-top: 5px; }
+        .timer { font-size: 28px; font-weight: 800; font-family: 'Courier New', monospace; color: var(--primary); text-shadow: 0 0 10px rgba(0,210,255,0.3); }
+        
+        .control-group { display: flex; flex-direction: column; gap: 6px; }
+        label { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: #94a3b8; font-weight: 600; }
+        
+        .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+        button { background: #334155; border: none; color: white; padding: 8px; border-radius: 8px; cursor: pointer; font-size: 12px; transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); }
+        button:hover { background: #475569; transform: translateY(-1px); }
+        button:active { transform: translateY(0); }
+        button.active { background: linear-gradient(135deg, var(--primary), var(--accent)); box-shadow: 0 4px 12px rgba(58,123,213,0.4); }
+        
+        .slider-wrap { display: flex; align-items: center; gap: 10px; }
+        input[type="range"] { flex: 1; accent-color: var(--primary); }
+
+        .scramble-btn { background: linear-gradient(135deg, #f59e0b, #d97706); font-weight: bold; margin-top: 10px; }
+
+        /* Mobile Optimization */
+        @media (max-width: 600px) {
+            .sidebar { width: 160px; padding: 10px; }
+            .timer { font-size: 20px; }
+        }
     </style>
 </head>
 <body>
 
-<div id="ui-overlay">
-    <div class="controls panel">
-        <h4>1. 階數選擇</h4>
-        <div class="btn-group">
-            <button data-cmd="order" data-val="2">2x2</button>
-            <button data-cmd="order" data-val="3" class="active">3x3</button>
-            <button data-cmd="order" data-val="4">4x4</button>
+<div id="app-ui">
+    <div class="sidebar panel">
+        <label>Cube Order (階數)</label>
+        <div class="grid-3">
+            <button class="order-btn" data-val="2">2x2</button>
+            <button class="order-btn active" data-val="3">3x3</button>
+            <button class="order-btn" data-val="4">4x4</button>
+            <button class="order-btn" data-val="5">5x5</button>
+            <button class="order-btn" data-val="6">6x6</button>
+            <button class="order-btn" data-val="7">7x7</button>
         </div>
 
-        <h4>2. 工具</h4>
-        <button data-cmd="scramble">打亂方塊 (Scramble)</button>
-        <button data-cmd="undo">悔步 (Undo)</button>
-        <button data-cmd="reset">重置 (Reset)</button>
-
-        <h4>3. 系統</h4>
-        <button data-cmd="wireframe">透視模式</button>
-        <button data-cmd="camera">視角重置</button>
-        <button data-cmd="theme">深/淺色切換</button>
-        <div class="hint">鍵盤: U, D, L, R, F, B 轉動</div>
+        <label>Simulation</label>
+        <button class="scramble-btn" id="scramble">SCRAMBLE (打亂)</button>
+        <button id="undo">UNDO (悔步)</button>
+        
+        <label>Visuals</label>
+        <div class="slider-wrap">
+            <input type="range" id="speed" min="0.1" max="1.0" step="0.1" value="0.4">
+        </div>
+        <button id="explode">EXPLOSION VIEW (爆炸模式)</button>
+        <button id="screenshot">SNAPSHOT (截圖)</button>
+        <button id="reset-cam">RESET CAMERA (視角重置)</button>
     </div>
 
-    <div class="stats panel">
+    <div class="stats-box panel">
         <div class="timer" id="timer">00:00.0</div>
-        <div id="move-count">步數: 0</div>
+        <div style="font-size: 12px; color: #94a3b8; margin-top: 4px;">MOVES: <span id="move-count">0</span></div>
     </div>
 </div>
 
-<!-- 使用穩定版 CDN 並包含所有依賴 -->
 <script type="importmap">
     {
         "imports": {
@@ -70,383 +88,253 @@
     import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
     import gsap from 'gsap';
 
-    // --- 全域變數 ---
+    // --- Configuration ---
     let scene, camera, renderer, controls, cubeGroup;
-    let currentOrder = 3;
+    let order = 3;
     let isAnimating = false;
-    let isWireframe = false;
+    let isExploded = false;
+    let moveCount = 0;
     let moveHistory = [];
-    let moveCounter = 0;
-    let timerInterval, startTime, isTimerStarted = false;
+    let startTime, timerInterval;
+    let animSpeed = 0.4;
 
     const COLORS = {
-        top: 0xffd500, bottom: 0xffffff, front: 0xb7121f,
-        back: 0xff5800, left: 0x0046ad, right: 0x009b48, inside: 0x111111
+        y: 0xffd500, w: 0xffffff, r: 0xb7121f,
+        o: 0xff5800, b: 0x0046ad, g: 0x009b48, inner: 0x050505
     };
 
-    // --- 初始化 ---
     init();
-    animate();
+    render();
 
     function init() {
         scene = new THREE.Scene();
-        scene.background = new THREE.Color(0x1a1a1a);
-
+        
         camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
-        camera.position.set(6, 6, 10);
+        camera.position.set(order * 2, order * 2, order * 3);
 
-        renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
         renderer.setSize(window.innerWidth, window.innerHeight);
         renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.shadowMap.enabled = true;
         document.body.appendChild(renderer.domElement);
 
         controls = new OrbitControls(camera, renderer.domElement);
         controls.enableDamping = true;
+        controls.dampingFactor = 0.05;
 
-        // 增強光照，確保方塊清晰
-        const ambientLight = new THREE.AmbientLight(0xffffff, 1.0);
-        scene.add(ambientLight);
-        const sunLight = new THREE.DirectionalLight(0xffffff, 1.2);
-        sunLight.position.set(10, 20, 10);
-        scene.add(sunLight);
+        // Lights
+        const ambient = new THREE.AmbientLight(0xffffff, 0.8);
+        scene.add(ambient);
+        const sun = new THREE.DirectionalLight(0xffffff, 1.2);
+        sun.position.set(10, 20, 15);
+        scene.add(sun);
 
-        createCube(currentOrder);
-        setupEventListeners();
+        createCube(order);
+        bindEvents();
+        loadState();
     }
 
-    // --- 核心功能：建立魔方 ---
-    function createCube(order) {
-        if (cubeGroup) scene.remove(cubeGroup);
-        cubeGroup = new THREE.Group();
-        
-        const offset = (order - 1) / 2;
-        const spacing = 1.0; 
-        const geometry = new THREE.BoxGeometry(0.96, 0.96, 0.96);
+    // --- Core Cube Logic ---
+    function createCube(n) {
+        if (cubeGroup) {
+            // Memory Cleanup: Dispose geometries and materials
+            cubeGroup.children.forEach(c => {
+                c.geometry.dispose();
+                c.material.forEach(m => m.dispose());
+            });
+            scene.remove(cubeGroup);
+        }
 
-        for (let x = 0; x < order; x++) {
-            for (let y = 0; y < order; y++) {
-                for (let z = 0; z < order; z++) {
-                    const materials = [
-                        new THREE.MeshStandardMaterial({ color: (x === order - 1) ? COLORS.right : COLORS.inside }),
-                        new THREE.MeshStandardMaterial({ color: (x === 0) ? COLORS.left : COLORS.inside }),
-                        new THREE.MeshStandardMaterial({ color: (y === order - 1) ? COLORS.top : COLORS.inside }),
-                        new THREE.MeshStandardMaterial({ color: (y === 0) ? COLORS.bottom : COLORS.inside }),
-                        new THREE.MeshStandardMaterial({ color: (z === order - 1) ? COLORS.front : COLORS.inside }),
-                        new THREE.MeshStandardMaterial({ color: (z === 0) ? COLORS.back : COLORS.inside })
+        cubeGroup = new THREE.Group();
+        const offset = (n - 1) / 2;
+        const geom = new THREE.BoxGeometry(0.97, 0.97, 0.97);
+
+        for (let x = 0; x < n; x++) {
+            for (let y = 0; y < n; y++) {
+                for (let z = 0; z < n; z++) {
+                    // Only render visible cubes or cubes for internal mechanics? 
+                    // To keep it simple and robust, we render all, but optimize materials.
+                    const mats = [
+                        new THREE.MeshStandardMaterial({ color: x === n-1 ? COLORS.g : COLORS.inner, roughness: 0.2, metalness: 0.1 }),
+                        new THREE.MeshStandardMaterial({ color: x === 0 ? COLORS.b : COLORS.inner, roughness: 0.2, metalness: 0.1 }),
+                        new THREE.MeshStandardMaterial({ color: y === n-1 ? COLORS.y : COLORS.inner, roughness: 0.2, metalness: 0.1 }),
+                        new THREE.MeshStandardMaterial({ color: y === 0 ? COLORS.w : COLORS.inner, roughness: 0.2, metalness: 0.1 }),
+                        new THREE.MeshStandardMaterial({ color: z === n-1 ? COLORS.r : COLORS.inner, roughness: 0.2, metalness: 0.1 }),
+                        new THREE.MeshStandardMaterial({ color: z === 0 ? COLORS.o : COLORS.inner, roughness: 0.2, metalness: 0.1 })
                     ];
 
-                    const cubie = new THREE.Mesh(geometry, materials);
-                    // 關鍵：精確計算位置
+                    const cubie = new THREE.Mesh(geom, mats);
                     cubie.position.set(x - offset, y - offset, z - offset);
-                    cubie.userData.originalPos = cubie.position.clone();
                     cubeGroup.add(cubie);
                 }
             }
         }
         scene.add(cubeGroup);
+        saveState();
     }
 
-    // --- 旋轉邏輯（修復浮點數 bug） ---
-    async function rotateLayer(axis, layerIndex, angle, isUndo = false) {
+    async function rotateLayer(axis, layerIdx, angle, history = true) {
         if (isAnimating) return;
         isAnimating = true;
-
-        if (!isTimerStarted && !isUndo) startTimer();
+        if (moveCount === 0) startTimer();
 
         const pivot = new THREE.Group();
         scene.add(pivot);
 
-        const offset = (currentOrder - 1) / 2;
-        const targetCoord = layerIndex - offset;
+        const offset = (order - 1) / 2;
+        const target = layerIdx - offset;
 
-        // 選取符合該層座標的小方塊（加入小量誤差容許值 0.1）
-        const targets = [];
+        const cubies = [];
         const children = [...cubeGroup.children];
-        children.forEach(cubie => {
-            if (Math.abs(cubie.position[axis] - targetCoord) < 0.1) {
-                targets.push(cubie);
-                pivot.attach(cubie);
+        
+        children.forEach(c => {
+            // Using small epsilon for float comparison to fix "stuck" bug
+            if (Math.abs(c.position[axis] - target) < 0.1) {
+                cubies.push(c);
+                pivot.attach(c);
             }
         });
 
         await gsap.to(pivot.rotation, {
             [axis]: angle,
-            duration: 0.35,
+            duration: animSpeed,
             ease: "power2.inOut"
         });
 
-        // 動畫結束，放回群組並「強制校正」座標
-        targets.forEach(cubie => {
-            cubeGroup.attach(cubie);
-            cubie.position.x = Math.round(cubie.position.x * 2) / 2;
-            cubie.position.y = Math.round(cubie.position.y * 2) / 2;
-            cubie.position.z = Math.round(cubie.position.z * 2) / 2;
-            // 同時校正旋轉，避免萬向鎖誤差累積
-            cubie.rotation.set(
-                Math.round(cubie.rotation.x / (Math.PI/2)) * (Math.PI/2),
-                Math.round(cubie.rotation.y / (Math.PI/2)) * (Math.PI/2),
-                Math.round(cubie.rotation.z / (Math.PI/2)) * (Math.PI/2)
+        cubies.forEach(c => {
+            cubeGroup.attach(c);
+            // Self-Correction Logic to prevent drift
+            c.position.x = Math.round(c.position.x * 2) / 2;
+            c.position.y = Math.round(c.position.y * 2) / 2;
+            c.position.z = Math.round(c.position.z * 2) / 2;
+            c.rotation.set(
+                Math.round(c.rotation.x / (Math.PI/2)) * (Math.PI/2),
+                Math.round(c.rotation.y / (Math.PI/2)) * (Math.PI/2),
+                Math.round(c.rotation.z / (Math.PI/2)) * (Math.PI/2)
             );
         });
 
         scene.remove(pivot);
-        if (!isUndo) {
-            moveHistory.push({ axis, layerIndex, angle });
-            moveCounter++;
-            updateUI();
+        if (history) {
+            moveHistory.push({ axis, layerIdx, angle });
+            moveCount++;
+            document.getElementById('move-count').innerText = moveCount;
+            saveState();
         }
         isAnimating = false;
     }
 
-    // --- UI 與 事件處理 ---
-    function setupEventListeners() {
-        // 按鈕監聽
-        document.querySelectorAll('button[data-cmd]').forEach(btn => {
-            btn.addEventListener('click', () => {
-                const cmd = btn.dataset.cmd;
-                const val = btn.dataset.val;
-
-                if (cmd === 'order') {
-                    document.querySelectorAll('button[data-cmd="order"]').forEach(b => b.classList.remove('active'));
-                    btn.classList.add('active');
-                    currentOrder = parseInt(val);
-                    resetAll();
-                } else if (cmd === 'scramble') {
-                    scramble();
-                } else if (cmd === 'undo') {
-                    undo();
-                } else if (cmd === 'reset') {
-                    resetAll();
-                } else if (cmd === 'wireframe') {
-                    isWireframe = !isWireframe;
-                    cubeGroup.children.forEach(c => c.material.forEach(m => m.wireframe = isWireframe));
-                } else if (cmd === 'camera') {
-                    gsap.to(camera.position, { x: 6, y: 6, z: 10, duration: 1, onUpdate: () => camera.lookAt(0,0,0) });
-                } else if (cmd === 'theme') {
-                    const isDark = scene.background.getHex() === 0x1a1a1a;
-                    scene.background.set(isDark ? 0xdddddd : 0x1a1a1a);
-                }
-            });
-        });
-
-        // 鍵盤監聽
-        window.addEventListener('keydown', (e) => {
-            const k = e.key.toUpperCase();
-            const lastIdx = currentOrder - 1;
-            const moveMap = {
-                'U': ['y', lastIdx, -Math.PI/2], 'D': ['y', 0, Math.PI/2],
-                'L': ['x', 0, Math.PI/2], 'R': ['x', lastIdx, -Math.PI/2],
-                'F': ['z', lastIdx, -Math.PI/2], 'B': ['z', 0, Math.PI/2]
+    // --- Utilities ---
+    function bindEvents() {
+        document.querySelectorAll('.order-btn').forEach(btn => {
+            btn.onclick = () => {
+                if (isAnimating) return;
+                order = parseInt(btn.dataset.val);
+                document.querySelectorAll('.order-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                resetGame();
             };
-            if (moveMap[k]) rotateLayer(...moveMap[k]);
         });
 
-        window.addEventListener('resize', () => {
+        document.getElementById('scramble').onclick = async () => {
+            if (isAnimating) return;
+            for (let i = 0; i < order * 5; i++) {
+                const axes = ['x', 'y', 'z'];
+                const a = axes[Math.floor(Math.random()*3)];
+                const l = Math.floor(Math.random()*order);
+                const ang = Math.random() > 0.5 ? Math.PI/2 : -Math.PI/2;
+                await rotateLayer(a, l, ang);
+            }
+        };
+
+        document.getElementById('undo').onclick = () => {
+            if (moveHistory.length === 0 || isAnimating) return;
+            const m = moveHistory.pop();
+            rotateLayer(m.axis, m.layerIdx, -m.angle, false);
+            moveCount--;
+            document.getElementById('move-count').innerText = moveCount;
+        };
+
+        document.getElementById('explode').onclick = () => {
+            isExploded = !isExploded;
+            cubeGroup.children.forEach(c => {
+                const target = c.position.clone().multiplyScalar(isExploded ? 1.5 : 0.666);
+                gsap.to(c.position, { x: target.x, y: target.y, z: target.z, duration: 0.5 });
+            });
+        };
+
+        document.getElementById('screenshot').onclick = () => {
+            const data = renderer.domElement.toDataURL("image/png");
+            const link = document.createElement('a');
+            link.download = 'my-cube.png';
+            link.href = data;
+            link.click();
+        };
+
+        document.getElementById('speed').oninput = (e) => animSpeed = 1.1 - e.target.value;
+
+        document.getElementById('reset-cam').onclick = () => {
+            gsap.to(camera.position, { x: order*2, y: order*2, z: order*3, duration: 1 });
+        };
+
+        window.addEventListener('keydown', (e) => {
+            const key = e.key.toUpperCase();
+            const last = order - 1;
+            const map = {
+                'U': ['y', last, -Math.PI/2], 'D': ['y', 0, Math.PI/2],
+                'L': ['x', 0, Math.PI/2], 'R': ['x', last, -Math.PI/2],
+                'F': ['z', last, -Math.PI/2], 'B': ['z', 0, Math.PI/2]
+            };
+            if (map[key]) rotateLayer(...map[key]);
+        });
+
+        window.onresize = () => {
             camera.aspect = window.innerWidth / window.innerHeight;
             camera.updateProjectionMatrix();
             renderer.setSize(window.innerWidth, window.innerHeight);
-        });
-    }
-
-    function resetAll() {
-        moveHistory = [];
-        moveCounter = 0;
-        isTimerStarted = false;
-        clearInterval(timerInterval);
-        document.getElementById('timer').innerText = "00:00.0";
-        updateUI();
-        createCube(currentOrder);
-    }
-
-    async function scramble() {
-        if (isAnimating) return;
-        resetAll();
-        const axes = ['x', 'y', 'z'];
-        for (let i = 0; i < 12; i++) {
-            const axis = axes[Math.floor(Math.random() * 3)];
-            const layer = Math.floor(Math.random() * currentOrder);
-            const angle = Math.random() > 0.5 ? Math.PI/2 : -Math.PI/2;
-            await rotateLayer(axis, layer, angle);
-        }
-    }
-
-    function undo() {
-        if (moveHistory.length === 0 || isAnimating) return;
-        const last = moveHistory.pop();
-        rotateLayer(last.axis, last.layerIndex, -last.angle, true);
-        moveCounter--;
-        updateUI();
-    }
-
-    function startTimer() {
-        isTimerStarted = true;
-        startTime = Date.now();
-        timerInterval = setInterval(() => {
-            const d = Date.now() - startTime;
-            const m = Math.floor(d / 60000);
-            const s = Math.floor((d % 60000) / 1000);
-            const ms = Math.floor((d % 1000) / 100);
-            document.getElementById('timer').innerText = `${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}.${ms}`;
-        }, 100);
-    }
-
-    function updateUI() {
-        document.getElementById('move-count').innerText = `步數: ${moveCounter}`;
-    }
-
-    function animate() {
-        requestAnimationFrame(animate);
-        if (controls) controls.update();
-        renderer.render(scene, camera);
-    }
-</script>
-</body>
-</html>
-        window.addEventListener('resize', onWindowResize);
-        window.addEventListener('keydown', handleKeyboard);
-        
-        // 全域暴露函數
-        window.changeOrder = (n) => { if(!isAnimating) { currentOrder = n; resetCube(); } };
-        window.scramble = () => scrambleCube();
-        window.undo = () => undoMove();
-        window.resetCube = () => { moveHistory = []; moveCounter = 0; updateStats(); stopTimer(); createCube(currentOrder); };
-        window.toggleWireframe = () => { isWireframe = !isWireframe; cubeGroup.children.forEach(c => c.material.forEach(m => m.wireframe = isWireframe)); };
-        window.resetCamera = () => { gsap.to(camera.position, {x: 6, y: 6, z: 10, duration: 1}); camera.lookAt(0,0,0); };
-        window.toggleTheme = () => { document.body.classList.toggle('light-mode'); scene.background = new THREE.Color(document.body.classList.contains('light-mode') ? 0xf0f0f0 : 0x111111); };
-    }
-
-    function createCube(order) {
-        if (cubeGroup) scene.remove(cubeGroup);
-        cubeGroup = new THREE.Group();
-        
-        const offset = (order - 1) / 2;
-        const geom = new THREE.BoxGeometry(0.95, 0.95, 0.95);
-
-        for (let x = 0; x < order; x++) {
-            for (let y = 0; y < order; y++) {
-                for (let z = 0; z < order; z++) {
-                    const materials = [
-                        new THREE.MeshStandardMaterial({ color: (x === order - 1) ? COLORS.right : COLORS.inside }),
-                        new THREE.MeshStandardMaterial({ color: (x === 0) ? COLORS.left : COLORS.inside }),
-                        new THREE.MeshStandardMaterial({ color: (y === order - 1) ? COLORS.top : COLORS.inside }),
-                        new THREE.MeshStandardMaterial({ color: (y === 0) ? COLORS.bottom : COLORS.inside }),
-                        new THREE.MeshStandardMaterial({ color: (z === order - 1) ? COLORS.front : COLORS.inside }),
-                        new THREE.MeshStandardMaterial({ color: (z === 0) ? COLORS.back : COLORS.inside })
-                    ];
-
-                    const cubie = new THREE.Mesh(geom, materials);
-                    cubie.position.set(x - offset, y - offset, z - offset);
-                    cubeGroup.add(cubie);
-                }
-            }
-        }
-        scene.add(cubeGroup);
-    }
-
-    async function rotateLayer(axis, layerIndex, angle, saveHistory = true) {
-        if (isAnimating) return;
-        isAnimating = true;
-        startTimer();
-
-        const pivot = new THREE.Group();
-        scene.add(pivot);
-
-        const offset = (currentOrder - 1) / 2;
-        const layerCoord = layerIndex - offset;
-
-        const targets = [];
-        const children = [...cubeGroup.children];
-        children.forEach(c => {
-            if (Math.abs(c.position[axis] - layerCoord) < 0.1) {
-                targets.push(c);
-                pivot.attach(c);
-            }
-        });
-
-        await gsap.to(pivot.rotation, { [axis]: angle, duration: 0.3, ease: "power2.inOut" });
-
-        targets.forEach(c => {
-            cubeGroup.attach(c);
-            c.position.x = Math.round(c.position.x * 2) / 2;
-            c.position.y = Math.round(c.position.y * 2) / 2;
-            c.position.z = Math.round(c.position.z * 2) / 2;
-        });
-
-        scene.remove(pivot);
-        if (saveHistory) {
-            moveHistory.push({ axis, layerIndex, angle });
-            moveCounter++;
-            updateStats();
-        }
-        isAnimating = false;
-    }
-
-    function handleKeyboard(e) {
-        const key = e.key.toUpperCase();
-        const map = { 
-            'U': ['y', currentOrder-1, -Math.PI/2], 
-            'D': ['y', 0, Math.PI/2],
-            'L': ['x', 0, Math.PI/2], 
-            'R': ['x', currentOrder-1, -Math.PI/2],
-            'F': ['z', currentOrder-1, -Math.PI/2], 
-            'B': ['z', 0, Math.PI/2]
         };
-        if (map[key]) rotateLayer(...map[key]);
     }
 
-    async function scrambleCube() {
-        if (isAnimating) return;
-        resetCube();
-        const axes = ['x', 'y', 'z'];
-        for (let i = 0; i < 15; i++) {
-            const axis = axes[Math.floor(Math.random() * 3)];
-            const layer = Math.floor(Math.random() * currentOrder);
-            const angle = Math.random() > 0.5 ? Math.PI/2 : -Math.PI/2;
-            await rotateLayer(axis, layer, angle, true);
-        }
-    }
-
-    function undoMove() {
-        if (moveHistory.length === 0 || isAnimating) return;
-        const last = moveHistory.pop();
-        rotateLayer(last.axis, last.layerIndex, -last.angle, false);
-        moveCounter--;
-        updateStats();
-    }
-
-    function updateStats() {
-        document.getElementById('move-count').innerText = `步數: ${moveCounter}`;
+    function resetGame() {
+        moveCount = 0;
+        moveHistory = [];
+        document.getElementById('move-count').innerText = 0;
+        stopTimer();
+        createCube(order);
     }
 
     function startTimer() {
-        if (isTimerRunning) return;
-        isTimerRunning = true;
         startTime = Date.now();
         timerInterval = setInterval(() => {
             const diff = Date.now() - startTime;
             const m = Math.floor(diff / 60000);
             const s = Math.floor((diff % 60000) / 1000);
             const ms = Math.floor((diff % 1000) / 100);
-            document.getElementById('timer').innerText = 
-                `${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}.${ms}`;
+            document.getElementById('timer').innerText = `${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}.${ms}`;
         }, 100);
     }
 
     function stopTimer() {
-        isTimerRunning = false;
         clearInterval(timerInterval);
         document.getElementById('timer').innerText = "00:00.0";
     }
 
-    function onWindowResize() {
-        camera.aspect = window.innerWidth / window.innerHeight;
-        camera.updateProjectionMatrix();
-        renderer.setSize(window.innerWidth, window.innerHeight);
+    function saveState() {
+        const state = { order, moveCount };
+        localStorage.setItem('cube_state', JSON.stringify(state));
     }
 
-    function animate() {
-        requestAnimationFrame(animate);
-        if (controls) controls.update();
+    function loadState() {
+        const saved = localStorage.getItem('cube_state');
+        if (saved) {
+            const { order: savedOrder } = JSON.parse(saved);
+            // order = savedOrder; // 可以選擇是否自動恢復階數
+        }
+    }
+
+    function render() {
+        requestAnimationFrame(render);
+        controls.update();
         renderer.render(scene, camera);
     }
 </script>
