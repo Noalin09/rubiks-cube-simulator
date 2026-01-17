@@ -2,74 +2,63 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Ultimate Rubik's Lab - Pro Edition</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rubik's Geometry Lab - Master Edition</title>
     <style>
-        :root { --primary: #00d2ff; --accent: #3a7bd5; --bg: #0f172a; --panel: rgba(15, 23, 42, 0.9); }
-        body { margin: 0; overflow: hidden; background: radial-gradient(circle at center, #1e293b 0%, #0f172a 100%); color: #f8fafc; font-family: 'Inter', system-ui, sans-serif; }
-        canvas { display: block; touch-action: none; }
-
-        /* UI Overlay */
-        #app-ui { position: absolute; inset: 0; pointer-events: none; display: flex; flex-direction: column; justify-content: space-between; padding: 20px; }
-        .panel { pointer-events: auto; background: var(--panel); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.1); border-radius: 16px; padding: 16px; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.3); }
+        :root { --accent: #00ffcc; --bg: #050505; }
+        body { margin: 0; overflow: hidden; background: var(--bg); color: #fff; font-family: 'Inter', sans-serif; }
+        canvas { display: block; }
         
-        /* Sidebar */
-        .sidebar { width: 220px; display: flex; flex-direction: column; gap: 12px; }
-        .stats-box { position: absolute; top: 20px; right: 20px; min-width: 120px; text-align: right; }
+        #ui { position: absolute; inset: 0; pointer-events: none; display: flex; padding: 20px; gap: 20px; }
+        .panel { pointer-events: auto; background: rgba(0,0,0,0.85); border: 1px solid #333; border-radius: 12px; padding: 15px; width: 240px; display: flex; flex-direction: column; gap: 10px; box-shadow: 0 0 20px rgba(0,0,0,0.5); }
         
-        .timer { font-size: 28px; font-weight: 800; font-family: 'Courier New', monospace; color: var(--primary); text-shadow: 0 0 10px rgba(0,210,255,0.3); }
+        h2 { font-size: 14px; margin: 0; color: var(--accent); text-transform: uppercase; letter-spacing: 2px; }
+        .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 5px; }
         
-        .control-group { display: flex; flex-direction: column; gap: 6px; }
-        label { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: #94a3b8; font-weight: 600; }
+        button { background: #1a1a1a; border: 1px solid #444; color: #fff; padding: 8px; border-radius: 6px; cursor: pointer; font-size: 11px; transition: 0.2s; }
+        button:hover { background: var(--accent); color: #000; border-color: var(--accent); }
+        button.active { background: var(--accent); color: #000; }
         
-        .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
-        button { background: #334155; border: none; color: white; padding: 8px; border-radius: 8px; cursor: pointer; font-size: 12px; transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); }
-        button:hover { background: #475569; transform: translateY(-1px); }
-        button:active { transform: translateY(0); }
-        button.active { background: linear-gradient(135deg, var(--primary), var(--accent)); box-shadow: 0 4px 12px rgba(58,123,213,0.4); }
-        
-        .slider-wrap { display: flex; align-items: center; gap: 10px; }
-        input[type="range"] { flex: 1; accent-color: var(--primary); }
-
-        .scramble-btn { background: linear-gradient(135deg, #f59e0b, #d97706); font-weight: bold; margin-top: 10px; }
-
-        /* Mobile Optimization */
-        @media (max-width: 600px) {
-            .sidebar { width: 160px; padding: 10px; }
-            .timer { font-size: 20px; }
-        }
+        .timer-box { position: absolute; top: 20px; right: 20px; text-align: right; }
+        .timer { font-size: 32px; font-family: monospace; color: var(--accent); }
     </style>
 </head>
 <body>
 
-<div id="app-ui">
-    <div class="sidebar panel">
-        <label>Cube Order (階數)</label>
-        <div class="grid-3">
-            <button class="order-btn" data-val="2">2x2</button>
-            <button class="order-btn active" data-val="3">3x3</button>
-            <button class="order-btn" data-val="4">4x4</button>
-            <button class="order-btn" data-val="5">5x5</button>
-            <button class="order-btn" data-val="6">6x6</button>
-            <button class="order-btn" data-val="7">7x7</button>
+<div id="ui">
+    <div class="panel">
+        <h2>幾何類型 (Type)</h2>
+        <div class="grid">
+            <button class="type-btn active" data-type="classic">經典 N×N</button>
+            <button class="type-btn" data-type="mirror">鏡面異形</button>
+            <button class="type-btn" data-type="void">空心方塊</button>
+            <button class="type-btn" data-type="pyraminx">金字塔 (WIP)</button>
         </div>
 
-        <label>Simulation</label>
-        <button class="scramble-btn" id="scramble">SCRAMBLE (打亂)</button>
-        <button id="undo">UNDO (悔步)</button>
-        
-        <label>Visuals</label>
-        <div class="slider-wrap">
-            <input type="range" id="speed" min="0.1" max="1.0" step="0.1" value="0.4">
+        <h2>階數 (Order)</h2>
+        <div class="grid">
+            <button class="order-btn" data-val="2">2×2</button>
+            <button class="order-btn active" data-val="3">3×3</button>
+            <button class="order-btn" data-val="4">4×4</button>
+            <button class="order-btn" data-val="5">5×5</button>
         </div>
-        <button id="explode">EXPLOSION VIEW (爆炸模式)</button>
-        <button id="screenshot">SNAPSHOT (截圖)</button>
-        <button id="reset-cam">RESET CAMERA (視角重置)</button>
+
+        <h2>渲染外觀 (Skin)</h2>
+        <div class="grid">
+            <button class="skin-btn active" data-skin="neon">霓虹電馭</button>
+            <button class="skin-btn" data-skin="glass">鋼化玻璃</button>
+            <button class="skin-btn" data-skin="metal">黑金工業</button>
+        </div>
+
+        <h2>動作 (Actions)</h2>
+        <button id="scramble" style="background: #e67e22;">自動打亂</button>
+        <button id="solve">智慧還原 (Rewind)</button>
+        <button id="reset">重置所有</button>
     </div>
 
-    <div class="stats-box panel">
-        <div class="timer" id="timer">00:00.0</div>
-        <div style="font-size: 12px; color: #94a3b8; margin-top: 4px;">MOVES: <span id="move-count">0</span></div>
+    <div class="timer-box">
+        <div class="timer" id="timer">00:00.00</div>
+        <div id="status">STATUS: STANDBY</div>
     </div>
 </div>
 
@@ -88,19 +77,14 @@
     import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
     import gsap from 'gsap';
 
-    // --- Configuration ---
     let scene, camera, renderer, controls, cubeGroup;
-    let order = 3;
-    let isAnimating = false;
-    let isExploded = false;
-    let moveCount = 0;
-    let moveHistory = [];
-    let startTime, timerInterval;
-    let animSpeed = 0.4;
+    let order = 3, currentType = 'classic', currentSkin = 'neon';
+    let isAnimating = false, moveHistory = [];
+    let startTime, timerInt;
 
-    const COLORS = {
-        y: 0xffd500, w: 0xffffff, r: 0xb7121f,
-        o: 0xff5800, b: 0x0046ad, g: 0x009b48, inner: 0x050505
+    const COLORS = { 
+        y: 0xffff00, w: 0xffffff, r: 0xff0000, 
+        o: 0xffa500, b: 0x0000ff, g: 0x00ff00, inner: 0x0a0a0a 
     };
 
     init();
@@ -108,228 +92,142 @@
 
     function init() {
         scene = new THREE.Scene();
-        
-        camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
-        camera.position.set(order * 2, order * 2, order * 3);
+        scene.background = new THREE.Color(0x050505);
 
-        renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+        camera = new THREE.PerspectiveCamera(45, window.innerWidth/window.innerHeight, 0.1, 1000);
+        camera.position.set(order*2, order*2, order*3);
+
+        renderer = new THREE.WebGLRenderer({ antialias: true });
         renderer.setSize(window.innerWidth, window.innerHeight);
-        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-        renderer.shadowMap.enabled = true;
+        renderer.setPixelRatio(window.devicePixelRatio);
+        renderer.toneMapping = THREE.ReinhardToneMapping;
         document.body.appendChild(renderer.domElement);
 
         controls = new OrbitControls(camera, renderer.domElement);
         controls.enableDamping = true;
-        controls.dampingFactor = 0.05;
 
         // Lights
-        const ambient = new THREE.AmbientLight(0xffffff, 0.8);
-        scene.add(ambient);
-        const sun = new THREE.DirectionalLight(0xffffff, 1.2);
-        sun.position.set(10, 20, 15);
-        scene.add(sun);
+        const amb = new THREE.AmbientLight(0xffffff, 0.5);
+        scene.add(amb);
+        const point = new THREE.PointLight(0xffffff, 2);
+        point.position.set(10, 10, 10);
+        scene.add(point);
 
-        createCube(order);
-        bindEvents();
-        loadState();
+        createPuzzle();
+        bindUI();
     }
 
-    // --- Core Cube Logic ---
-    function createCube(n) {
+    function createPuzzle() {
         if (cubeGroup) {
-            // Memory Cleanup: Dispose geometries and materials
-            cubeGroup.children.forEach(c => {
-                c.geometry.dispose();
-                c.material.forEach(m => m.dispose());
-            });
+            cubeGroup.children.forEach(c => { c.geometry.dispose(); c.material.forEach(m => m.dispose()); });
             scene.remove(cubeGroup);
         }
-
         cubeGroup = new THREE.Group();
-        const offset = (n - 1) / 2;
-        const geom = new THREE.BoxGeometry(0.97, 0.97, 0.97);
+        const off = (order - 1) / 2;
 
-        for (let x = 0; x < n; x++) {
-            for (let y = 0; y < n; y++) {
-                for (let z = 0; z < n; z++) {
-                    // Only render visible cubes or cubes for internal mechanics? 
-                    // To keep it simple and robust, we render all, but optimize materials.
-                    const mats = [
-                        new THREE.MeshStandardMaterial({ color: x === n-1 ? COLORS.g : COLORS.inner, roughness: 0.2, metalness: 0.1 }),
-                        new THREE.MeshStandardMaterial({ color: x === 0 ? COLORS.b : COLORS.inner, roughness: 0.2, metalness: 0.1 }),
-                        new THREE.MeshStandardMaterial({ color: y === n-1 ? COLORS.y : COLORS.inner, roughness: 0.2, metalness: 0.1 }),
-                        new THREE.MeshStandardMaterial({ color: y === 0 ? COLORS.w : COLORS.inner, roughness: 0.2, metalness: 0.1 }),
-                        new THREE.MeshStandardMaterial({ color: z === n-1 ? COLORS.r : COLORS.inner, roughness: 0.2, metalness: 0.1 }),
-                        new THREE.MeshStandardMaterial({ color: z === 0 ? COLORS.o : COLORS.inner, roughness: 0.2, metalness: 0.1 })
-                    ];
+        for (let x=0; x<order; x++) {
+            for (let y=0; y<order; y++) {
+                for (let z=0; z<order; z++) {
+                    // 空心邏輯
+                    if (currentType === 'void' && 
+                        (x>0 && x<order-1) && (y>0 && y<order-1) ||
+                        (x>0 && x<order-1) && (z>0 && z<order-1) ||
+                        (y>0 && y<order-1) && (z>0 && z<order-1)) continue;
 
+                    let geom;
+                    if (currentType === 'mirror') {
+                        // 鏡面異形：每個塊大小不同
+                        geom = new THREE.BoxGeometry(0.5 + x*0.3, 0.5 + y*0.3, 0.5 + z*0.3);
+                    } else {
+                        geom = new THREE.BoxGeometry(0.95, 0.95, 0.95);
+                    }
+
+                    const mats = createMaterials(x, y, z);
                     const cubie = new THREE.Mesh(geom, mats);
-                    cubie.position.set(x - offset, y - offset, z - offset);
+                    cubie.position.set(x-off, y-off, z-off);
                     cubeGroup.add(cubie);
                 }
             }
         }
         scene.add(cubeGroup);
-        saveState();
     }
 
-    async function rotateLayer(axis, layerIdx, angle, history = true) {
+    function createMaterials(x, y, z) {
+        const getCol = (isEdge, col) => {
+            if (!isEdge) return COLORS.inner;
+            if (currentSkin === 'glass') return 0x88ccff;
+            return col;
+        };
+
+        const config = {
+            roughness: currentSkin === 'metal' ? 0.1 : 0.4,
+            metalness: currentSkin === 'metal' ? 0.9 : 0.1,
+            transparent: currentSkin === 'glass',
+            opacity: currentSkin === 'glass' ? 0.6 : 1.0,
+            emissiveIntensity: currentSkin === 'neon' ? 0.5 : 0
+        };
+
+        return [
+            new THREE.MeshStandardMaterial({ color: getCol(x===order-1, COLORS.g), ...config }),
+            new THREE.MeshStandardMaterial({ color: getCol(x===0, COLORS.b), ...config }),
+            new THREE.MeshStandardMaterial({ color: getCol(y===order-1, COLORS.y), ...config }),
+            new THREE.MeshStandardMaterial({ color: getCol(y===0, COLORS.w), ...config }),
+            new THREE.MeshStandardMaterial({ color: getCol(z===order-1, COLORS.r), ...config }),
+            new THREE.MeshStandardMaterial({ color: getCol(z===0, COLORS.o), ...config })
+        ];
+    }
+
+    async function rotate(axis, idx, ang, record = true) {
         if (isAnimating) return;
         isAnimating = true;
-        if (moveCount === 0) startTimer();
-
         const pivot = new THREE.Group();
         scene.add(pivot);
 
-        const offset = (order - 1) / 2;
-        const target = layerIdx - offset;
-
-        const cubies = [];
-        const children = [...cubeGroup.children];
-        
-        children.forEach(c => {
-            // Using small epsilon for float comparison to fix "stuck" bug
-            if (Math.abs(c.position[axis] - target) < 0.1) {
-                cubies.push(c);
+        const targetCoord = idx - (order - 1) / 2;
+        const targets = [];
+        [...cubeGroup.children].forEach(c => {
+            if (Math.abs(c.position[axis] - targetCoord) < 0.1) {
+                targets.push(c);
                 pivot.attach(c);
             }
         });
 
-        await gsap.to(pivot.rotation, {
-            [axis]: angle,
-            duration: animSpeed,
-            ease: "power2.inOut"
-        });
+        await gsap.to(pivot.rotation, { [axis]: ang, duration: 0.3, ease: "power3.inOut" });
 
-        cubies.forEach(c => {
+        targets.forEach(c => {
             cubeGroup.attach(c);
-            // Self-Correction Logic to prevent drift
-            c.position.x = Math.round(c.position.x * 2) / 2;
-            c.position.y = Math.round(c.position.y * 2) / 2;
-            c.position.z = Math.round(c.position.z * 2) / 2;
-            c.rotation.set(
-                Math.round(c.rotation.x / (Math.PI/2)) * (Math.PI/2),
-                Math.round(c.rotation.y / (Math.PI/2)) * (Math.PI/2),
-                Math.round(c.rotation.z / (Math.PI/2)) * (Math.PI/2)
-            );
+            c.position.set(Math.round(c.position.x*10)/10, Math.round(c.position.y*10)/10, Math.round(c.position.z*10)/10);
+            c.rotation.set(Math.round(c.rotation.x/(Math.PI/2))*Math.PI/2, Math.round(c.rotation.y/(Math.PI/2))*Math.PI/2, Math.round(c.rotation.z/(Math.PI/2))*Math.PI/2);
         });
-
         scene.remove(pivot);
-        if (history) {
-            moveHistory.push({ axis, layerIdx, angle });
-            moveCount++;
-            document.getElementById('move-count').innerText = moveCount;
-            saveState();
-        }
+        if (record) moveHistory.push({ axis, idx, ang });
         isAnimating = false;
     }
 
-    // --- Utilities ---
-    function bindEvents() {
-        document.querySelectorAll('.order-btn').forEach(btn => {
-            btn.onclick = () => {
-                if (isAnimating) return;
-                order = parseInt(btn.dataset.val);
-                document.querySelectorAll('.order-btn').forEach(b => b.classList.remove('active'));
-                btn.classList.add('active');
-                resetGame();
-            };
-        });
-
+    function bindUI() {
+        document.querySelectorAll('.order-btn').forEach(b => b.onclick = () => { order = parseInt(b.dataset.val); createPuzzle(); });
+        document.querySelectorAll('.type-btn').forEach(b => b.onclick = () => { currentType = b.dataset.type; createPuzzle(); });
+        document.querySelectorAll('.skin-btn').forEach(b => b.onclick = () => { currentSkin = b.dataset.skin; createPuzzle(); });
+        
         document.getElementById('scramble').onclick = async () => {
-            if (isAnimating) return;
-            for (let i = 0; i < order * 5; i++) {
-                const axes = ['x', 'y', 'z'];
-                const a = axes[Math.floor(Math.random()*3)];
-                const l = Math.floor(Math.random()*order);
-                const ang = Math.random() > 0.5 ? Math.PI/2 : -Math.PI/2;
-                await rotateLayer(a, l, ang);
+            for(let i=0; i<10; i++) {
+                const axes = ['x','y','z'];
+                await rotate(axes[Math.floor(Math.random()*3)], Math.floor(Math.random()*order), Math.PI/2);
             }
         };
 
-        document.getElementById('undo').onclick = () => {
-            if (moveHistory.length === 0 || isAnimating) return;
-            const m = moveHistory.pop();
-            rotateLayer(m.axis, m.layerIdx, -m.angle, false);
-            moveCount--;
-            document.getElementById('move-count').innerText = moveCount;
+        document.getElementById('solve').onclick = async () => {
+            while(moveHistory.length > 0) {
+                const m = moveHistory.pop();
+                await rotate(m.axis, m.idx, -m.ang, false);
+            }
         };
 
-        document.getElementById('explode').onclick = () => {
-            isExploded = !isExploded;
-            cubeGroup.children.forEach(c => {
-                const target = c.position.clone().multiplyScalar(isExploded ? 1.5 : 0.666);
-                gsap.to(c.position, { x: target.x, y: target.y, z: target.z, duration: 0.5 });
-            });
+        window.onkeydown = (e) => {
+            const k = e.key.toUpperCase();
+            const map = { 'U':['y', order-1, -Math.PI/2], 'D':['y', 0, Math.PI/2], 'R':['x', order-1, -Math.PI/2], 'L':['x', 0, Math.PI/2] };
+            if(map[k]) rotate(...map[k]);
         };
-
-        document.getElementById('screenshot').onclick = () => {
-            const data = renderer.domElement.toDataURL("image/png");
-            const link = document.createElement('a');
-            link.download = 'my-cube.png';
-            link.href = data;
-            link.click();
-        };
-
-        document.getElementById('speed').oninput = (e) => animSpeed = 1.1 - e.target.value;
-
-        document.getElementById('reset-cam').onclick = () => {
-            gsap.to(camera.position, { x: order*2, y: order*2, z: order*3, duration: 1 });
-        };
-
-        window.addEventListener('keydown', (e) => {
-            const key = e.key.toUpperCase();
-            const last = order - 1;
-            const map = {
-                'U': ['y', last, -Math.PI/2], 'D': ['y', 0, Math.PI/2],
-                'L': ['x', 0, Math.PI/2], 'R': ['x', last, -Math.PI/2],
-                'F': ['z', last, -Math.PI/2], 'B': ['z', 0, Math.PI/2]
-            };
-            if (map[key]) rotateLayer(...map[key]);
-        });
-
-        window.onresize = () => {
-            camera.aspect = window.innerWidth / window.innerHeight;
-            camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth, window.innerHeight);
-        };
-    }
-
-    function resetGame() {
-        moveCount = 0;
-        moveHistory = [];
-        document.getElementById('move-count').innerText = 0;
-        stopTimer();
-        createCube(order);
-    }
-
-    function startTimer() {
-        startTime = Date.now();
-        timerInterval = setInterval(() => {
-            const diff = Date.now() - startTime;
-            const m = Math.floor(diff / 60000);
-            const s = Math.floor((diff % 60000) / 1000);
-            const ms = Math.floor((diff % 1000) / 100);
-            document.getElementById('timer').innerText = `${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}.${ms}`;
-        }, 100);
-    }
-
-    function stopTimer() {
-        clearInterval(timerInterval);
-        document.getElementById('timer').innerText = "00:00.0";
-    }
-
-    function saveState() {
-        const state = { order, moveCount };
-        localStorage.setItem('cube_state', JSON.stringify(state));
-    }
-
-    function loadState() {
-        const saved = localStorage.getItem('cube_state');
-        if (saved) {
-            const { order: savedOrder } = JSON.parse(saved);
-            // order = savedOrder; // 可以選擇是否自動恢復階數
-        }
     }
 
     function render() {
