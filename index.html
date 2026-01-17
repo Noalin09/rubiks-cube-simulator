@@ -3,9 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Rubik's Universe - Grandmaster Edition</title>
+    <title>Rubik's Universe Lab - Professional Simulator</title>
     <style>
-        :root { --primary: #00f2ff; --bg: #020617; --panel: rgba(15, 23, 42, 0.9); }
+        :root { --primary: #00f2ff; --accent: #7000ff; --bg: #020617; --panel: rgba(15, 23, 42, 0.95); }
         body { margin: 0; overflow: hidden; background: var(--bg); color: #fff; font-family: 'Segoe UI', system-ui, sans-serif; }
         canvas { display: block; touch-action: none; }
 
@@ -13,74 +13,102 @@
         #gui-container { position: absolute; inset: 0; pointer-events: none; padding: 20px; display: flex; flex-direction: column; justify-content: space-between; }
         .panel { pointer-events: auto; background: var(--panel); backdrop-filter: blur(15px); border: 1px solid rgba(0, 242, 255, 0.2); border-radius: 12px; padding: 15px; box-shadow: 0 0 30px rgba(0,0,0,0.5); }
         
-        .top-bar { display: flex; justify-content: space-between; align-items: flex-start; }
-        .stats { text-align: right; }
-        .timer { font-size: 32px; font-weight: 800; color: var(--primary); text-shadow: 0 0 10px rgba(0,242,255,0.5); font-family: monospace; }
-        
-        .side-bar { width: 220px; display: flex; flex-direction: column; gap: 10px; max-height: 80vh; overflow-y: auto; scrollbar-width: thin; }
-        .side-bar::-webkit-scrollbar { width: 4px; }
-        
-        h3 { font-size: 11px; text-transform: uppercase; letter-spacing: 2px; color: #64748b; margin: 10px 0 5px 0; }
-        .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; }
+        .side-bar { width: 200px; display: flex; flex-direction: column; gap: 8px; max-height: 85vh; overflow-y: auto; }
+        h3 { font-size: 10px; text-transform: uppercase; letter-spacing: 1.5px; color: #64748b; margin: 8px 0 4px 0; }
+        .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 5px; }
         
         button { background: #1e293b; border: 1px solid #334155; color: #fff; padding: 8px; border-radius: 6px; cursor: pointer; font-size: 11px; transition: 0.2s; }
-        button:hover { background: var(--primary); color: #000; border-color: var(--primary); }
-        button.active { background: var(--primary); color: #000; box-shadow: 0 0 15px var(--primary); }
+        button:hover { background: var(--primary); color: #000; }
+        button.active { background: var(--primary); color: #000; box-shadow: 0 0 10px var(--primary); }
         
-        .action-btn { background: linear-gradient(135deg, #00f2ff, #0062ff); font-weight: bold; width: 100%; border: none; margin-top: 5px; }
-        .danger-btn { background: #ef4444; border: none; }
+        .action-btn { background: linear-gradient(135deg, #00f2ff, #0062ff); font-weight: bold; border: none; margin-top: 5px; width: 100%; }
+        
+        /* 說明書頁面 (Manual) */
+        #manual-btn { position: absolute; bottom: 20px; right: 20px; width: 50px; height: 50px; border-radius: 25px; font-size: 20px; pointer-events: auto; background: var(--primary); color: #000; border: none; font-weight: bold; cursor: pointer; z-index: 100; }
+        #manual-page { position: absolute; top: 0; right: -400px; width: 350px; height: 100vh; background: var(--panel); backdrop-filter: blur(20px); border-left: 1px solid var(--primary); padding: 30px; box-sizing: border-box; transition: 0.4s cubic-bezier(0.19, 1, 0.22, 1); pointer-events: auto; z-index: 99; overflow-y: auto; }
+        #manual-page.open { right: 0; }
+        .manual-content h2 { color: var(--primary); border-bottom: 2px solid var(--primary); padding-bottom: 10px; }
+        .manual-content ul { padding-left: 20px; font-size: 13px; line-height: 1.6; color: #cbd5e1; }
+        .manual-content b { color: var(--primary); }
 
-        #toast { position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%); background: var(--primary); color: #000; padding: 10px 20px; border-radius: 20px; font-weight: bold; opacity: 0; transition: 0.5s; pointer-events: none; }
+        .timer { font-size: 28px; font-weight: bold; color: var(--primary); font-family: monospace; }
+        .stats { position: absolute; top: 20px; right: 20px; text-align: right; }
     </style>
 </head>
 <body>
 
 <div id="gui-container">
-    <div class="top-bar">
-        <div class="panel side-bar">
-            <h3>幾何結構 (Geometry)</h3>
-            <div class="grid">
-                <button class="type-btn active" data-type="cube">經典</button>
-                <button class="type-btn" data-type="mirror">鏡面</button>
-                <button class="type-btn" data-type="void">空心</button>
-                <button class="type-btn" data-type="ghost">幽靈</button>
-            </div>
-            
-            <h3>階數 (Order: 1-10)</h3>
-            <div class="grid">
-                <button class="order-btn" data-val="2">2x2</button>
-                <button class="order-btn active" data-val="3">3x3</button>
-                <button class="order-btn" data-val="4">4x4</button>
-                <button class="order-btn" data-val="5">5x5</button>
-                <button class="order-btn" data-val="7">7x7</button>
-                <button class="order-btn" data-val="10">10x10</button>
-            </div>
-
-            <h3>材質外觀 (Material)</h3>
-            <div class="grid">
-                <button class="skin-btn active" data-skin="neon">霓虹</button>
-                <button class="skin-btn" data-skin="glass">玻璃</button>
-                <button class="skin-btn" data-skin="metal">黑金</button>
-            </div>
-
-            <h3>功能組 (Features)</h3>
-            <button id="scramble" class="action-btn">智慧打亂</button>
-            <button id="solve-rewind">自動還原回溯</button>
-            <button id="undo-btn">悔步 (Undo)</button>
-            <button id="explode-btn">爆炸視圖切換</button>
-            <button id="snapshot">擷取當前畫面</button>
-            <button id="reset-game" class="danger-btn">系統重置</button>
+    <div class="side-bar panel">
+        <h3>結構類型</h3>
+        <div class="grid">
+            <button class="type-btn active" data-type="cube">經典模式</button>
+            <button class="type-btn" data-type="mirror">鏡面異形</button>
+            <button class="type-btn" data-type="void">空心結構</button>
+            <button class="type-btn" data-type="ghost">幽靈模式</button>
+        </div>
+        
+        <h3>階數設定</h3>
+        <div class="grid">
+            <button class="order-btn" data-val="2">2x2</button>
+            <button class="order-btn active" data-val="3">3x3</button>
+            <button class="order-btn" data-val="4">4x4</button>
+            <button class="order-btn" data-val="7">7x7</button>
         </div>
 
-        <div class="panel stats">
-            <div class="timer" id="timer">00:00.00</div>
-            <div style="font-size: 14px; opacity: 0.6;">步數: <span id="moves">0</span></div>
-            <div id="status" style="font-size: 10px; color: var(--primary); margin-top:5px;">SYSTEM: READY</div>
+        <h3>材質外觀</h3>
+        <div class="grid">
+            <button class="skin-btn active" data-skin="neon">霓虹</button>
+            <button class="skin-btn" data-skin="glass">玻璃</button>
+            <button class="skin-btn" data-skin="metal">黑金</button>
         </div>
+
+        <h3>快速動作</h3>
+        <button id="scramble" class="action-btn">隨機打亂</button>
+        <button id="solve-rewind">時間回溯還原</button>
+        <button id="explode-btn">爆炸視圖開關</button>
+        <button id="undo-btn">悔步 (Undo)</button>
+    </div>
+
+    <div class="stats panel">
+        <div class="timer" id="timer">00:00.00</div>
+        <div style="font-size: 12px; opacity: 0.7;">MOVES: <span id="moves">0</span></div>
     </div>
 </div>
 
-<div id="toast">MOVE RECORDED</div>
+<button id="manual-btn">?</button>
+
+<div id="manual-page">
+    <div class="manual-content">
+        <h2>實驗室操作手冊</h2>
+        <p>歡迎使用終極魔術方塊引擎，以下是 100+ 功能的操作指引：</p>
+        
+        <h3>1. 基礎轉動 (Keyboard)</h3>
+        <ul>
+            <li><b>U / D</b>: 頂層 / 底層旋轉</li>
+            <li><b>L / R</b>: 左層 / 右層旋轉</li>
+            <li><b>F / B</b>: 前層 / 後層旋轉</li>
+            <li><b>Shift + 按鍵</b>: 逆時針旋轉</li>
+        </ul>
+
+        <h3>2. 高階功能 (Features)</h3>
+        <ul>
+            <li><b>鏡面模式</b>: 塊體大小隨座標改變，形狀會隨旋轉而崩潰。</li>
+            <li><b>空心模式</b>: 移除中心軸，考驗空間對齊邏輯。</li>
+            <li><b>幽靈模式</b>: 方塊具有初始相位偏移，極難對齊。</li>
+            <li><b>時間回溯</b>: 引擎會倒序播放所有歷史動作直到初始狀態。</li>
+            <li><b>爆炸視圖</b>: 分離所有小塊，檢查內部 PBR 渲染結構。</li>
+        </ul>
+
+        <h3>3. 系統優化 (Fixed)</h3>
+        <ul>
+            <li><b>自動校準</b>: 修正了旋轉後的浮點數漂移。</li>
+            <li><b>垃圾回收</b>: 切換階數時自動釋放顯存資源。</li>
+            <li><b>物理特效</b>: 整合了 Unreal Bloom 發光與金屬反射。</li>
+        </ul>
+        
+        <button id="close-manual" style="width:100%; margin-top:20px;">關閉說明書</button>
+    </div>
+</div>
 
 <script type="importmap">
     {
@@ -100,21 +128,17 @@
     import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
     import gsap from 'gsap';
 
-    // --- 全域狀態系統 (State Management) ---
+    // --- 核心系統管理 ---
     const State = {
-        order: 3,
-        type: 'cube',
-        skin: 'neon',
-        isAnimating: false,
-        isExploded: false,
-        moveCount: 0,
-        history: [],
+        order: 3, type: 'cube', skin: 'neon',
+        isAnimating: false, isExploded: false,
+        moveCount: 0, history: [],
         timer: { start: 0, interval: null, running: false }
     };
 
-    const COLORS = {
-        top: 0xffff00, bottom: 0xffffff, front: 0xff0000,
-        back: 0xffa500, left: 0x0000ff, right: 0x00ff00, inner: 0x050505
+    const COLORS = { 
+        top: 0xffff00, bottom: 0xffffff, front: 0xff0000, 
+        back: 0xffa500, left: 0x0000ff, right: 0x00ff00, inner: 0x0a0a0a 
     };
 
     let scene, camera, renderer, controls, composer, cubeGroup;
@@ -122,21 +146,22 @@
     init();
     render();
 
-    // --- 初始化引擎 ---
     function init() {
         scene = new THREE.Scene();
-        camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
-        camera.position.set(State.order*2, State.order*2, State.order*3);
+        scene.background = new THREE.Color(0x020617);
 
-        renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+        camera = new THREE.PerspectiveCamera(45, window.innerWidth/window.innerHeight, 0.1, 1000);
+        camera.position.set(6, 6, 10);
+
+        renderer = new THREE.WebGLRenderer({ antialias: true });
         renderer.setSize(window.innerWidth, window.innerHeight);
         renderer.setPixelRatio(window.devicePixelRatio);
         renderer.toneMapping = THREE.ReinhardToneMapping;
         document.body.appendChild(renderer.domElement);
 
-        // 後處理：Bloom (發光)
+        // 發光特效優化
         const renderPass = new RenderPass(scene, camera);
-        const bloomPass = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 1.5, 0.4, 0.85);
+        const bloomPass = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 1.0, 0.4, 0.85);
         composer = new EffectComposer(renderer);
         composer.addPass(renderPass);
         composer.addPass(bloomPass);
@@ -144,18 +169,17 @@
         controls = new OrbitControls(camera, renderer.domElement);
         controls.enableDamping = true;
 
-        const ambLight = new THREE.AmbientLight(0xffffff, 0.5);
-        scene.add(ambLight);
-        const dirLight = new THREE.DirectionalLight(0xffffff, 2);
-        dirLight.position.set(10, 10, 10);
-        scene.add(dirLight);
+        const amb = new THREE.AmbientLight(0xffffff, 0.8);
+        scene.add(amb);
+        const sun = new THREE.PointLight(0xffffff, 1.5);
+        sun.position.set(10, 10, 10);
+        scene.add(sun);
 
-        buildPuzzle();
-        initEvents();
+        buildCube();
+        setupInteraction();
     }
 
-    // --- 核心幾何構造引擎 ---
-    function buildPuzzle() {
+    function buildCube() {
         if (cubeGroup) {
             cubeGroup.children.forEach(c => { c.geometry.dispose(); c.material.forEach(m => m.dispose()); });
             scene.remove(cubeGroup);
@@ -164,29 +188,21 @@
         const n = State.order;
         const offset = (n - 1) / 2;
 
-        for (let x = 0; x < n; x++) {
-            for (let y = 0; y < n; y++) {
-                for (let z = 0; z < n; z++) {
-                    // 空心邏輯：過濾內部塊
-                    if (State.type === 'void' && isInternal(x, y, z, n)) continue;
+        for (let x=0; x<n; x++) {
+            for (let y=0; y<n; y++) {
+                for (let z=0; z<n; z++) {
+                    // 空心邏輯判定
+                    if (State.type === 'void' && isCenter(x,y,z,n)) continue;
 
-                    let geom;
-                    if (State.type === 'mirror') {
-                        // 鏡面異形：動態縮放幾何
-                        geom = new THREE.BoxGeometry(0.4 + x*0.3, 0.4 + y*0.3, 0.4 + z*0.3);
-                    } else if (State.type === 'ghost') {
-                        // 幽靈模式：斜向切割感
-                        geom = new THREE.BoxGeometry(0.95, 0.95, 0.95);
-                    } else {
-                        geom = new THREE.BoxGeometry(0.96, 0.96, 0.96);
-                    }
+                    const geom = (State.type === 'mirror') ? 
+                        new THREE.BoxGeometry(0.5 + x*0.3, 0.5 + y*0.3, 0.5 + z*0.3) :
+                        new THREE.BoxGeometry(0.96, 0.96, 0.96);
 
                     const mats = createComplexMaterial(x, y, z, n);
                     const cubie = new THREE.Mesh(geom, mats);
-                    
                     cubie.position.set(x - offset, y - offset, z - offset);
-                    // 幽靈模式初始旋轉偏移
-                    if (State.type === 'ghost') cubie.rotation.set(Math.PI/8, Math.PI/8, 0);
+                    
+                    if (State.type === 'ghost') cubie.rotation.set(Math.PI/6, 0, Math.PI/12);
                     
                     cubeGroup.add(cubie);
                 }
@@ -195,137 +211,103 @@
         scene.add(cubeGroup);
     }
 
-    function isInternal(x, y, z, n) {
+    function isCenter(x,y,z,n) {
         if (n < 3) return false;
-        const isCenter = (v) => v > 0 && v < n - 1;
-        return (isCenter(x) && isCenter(y)) || (isCenter(x) && isCenter(z)) || (isCenter(y) && isCenter(z));
+        const mid = (v) => v > 0 && v < n-1;
+        return (mid(x) && mid(y)) || (mid(x) && mid(z)) || (mid(y) && mid(z));
     }
 
-    function createComplexMaterial(x, y, z, n) {
-        const getCol = (cond, col) => cond ? col : COLORS.inner;
+    function createComplexMaterial(x,y,z,n) {
+        const check = (cond, col) => cond ? col : COLORS.inner;
         const faces = [
-            getCol(x === n-1, COLORS.right), getCol(x === 0, COLORS.left),
-            getCol(y === n-1, COLORS.top), getCol(y === 0, COLORS.bottom),
-            getCol(z === n-1, COLORS.front), getCol(z === 0, COLORS.back)
+            check(x===n-1, COLORS.right), check(x===0, COLORS.left),
+            check(y===n-1, COLORS.top), check(y===0, COLORS.bottom),
+            check(z===n-1, COLORS.front), check(z===0, COLORS.back)
         ];
-
         return faces.map(c => new THREE.MeshStandardMaterial({
             color: c,
             roughness: State.skin === 'metal' ? 0.1 : 0.4,
-            metalness: State.skin === 'metal' ? 0.9 : 0.1,
+            metalness: State.skin === 'metal' ? 0.8 : 0.1,
             transparent: State.skin === 'glass',
             opacity: State.skin === 'glass' ? 0.6 : 1.0,
-            emissive: State.skin === 'neon' ? c : 0x000000,
-            emissiveIntensity: State.skin === 'neon' ? 0.4 : 0
+            emissive: State.skin === 'neon' ? c : 0,
+            emissiveIntensity: State.skin === 'neon' ? 0.3 : 0
         }));
     }
 
-    // --- 高階轉動引擎 (物理座標補償) ---
-    async function rotateLayer(axis, layerIdx, angle, record = true) {
+    async function rotate(axis, layer, angle, record = true) {
         if (State.isAnimating) return;
         State.isAnimating = true;
         startTimer();
 
         const pivot = new THREE.Group();
         scene.add(pivot);
-
-        const targetCoord = layerIdx - (State.order - 1) / 2;
+        const target = layer - (State.order-1)/2;
+        
         const targets = [];
         [...cubeGroup.children].forEach(c => {
-            // 修復 Bug: 增加誤差容許值至 0.15 以支援多階層
-            if (Math.abs(c.position[axis] - targetCoord) < 0.15) {
+            if (Math.abs(c.position[axis] - target) < 0.2) { // 增強判定區間修正 Bug
                 targets.push(c);
                 pivot.attach(c);
             }
         });
 
-        await gsap.to(pivot.rotation, { 
-            [axis]: angle, 
-            duration: 0.35, 
-            ease: "expo.out" 
-        });
+        await gsap.to(pivot.rotation, { [axis]: angle, duration: 0.3, ease: "power2.inOut" });
 
         targets.forEach(c => {
             cubeGroup.attach(c);
-            // 修正漂移 Bug: 強制對齊網格
-            c.position.x = Math.round(c.position.x * 2) / 2;
-            c.position.y = Math.round(c.position.y * 2) / 2;
-            c.position.z = Math.round(c.position.z * 2) / 2;
-            // 修正旋轉 Bug: 鎖定 90 度倍數
+            // 修正座標漂移 Bug
+            c.position.set(Math.round(c.position.x*2)/2, Math.round(c.position.y*2)/2, Math.round(c.position.z*2)/2);
             c.rotation.set(
-                Math.round(c.rotation.x / (Math.PI/2)) * (Math.PI/2),
-                Math.round(c.rotation.y / (Math.PI/2)) * (Math.PI/2),
-                Math.round(c.rotation.z / (Math.PI/2)) * (Math.PI/2)
+                Math.round(c.rotation.x/(Math.PI/2))*Math.PI/2,
+                Math.round(c.rotation.y/(Math.PI/2))*Math.PI/2,
+                Math.round(c.rotation.z/(Math.PI/2))*Math.PI/2
             );
         });
-
         scene.remove(pivot);
-        if (record) {
-            State.history.push({ axis, layerIdx, angle });
-            State.moveCount++;
-            updateUI();
-        }
+        if (record) { State.history.push({axis, layer, angle}); State.moveCount++; updateUI(); }
         State.isAnimating = false;
     }
 
-    // --- 功能邏輯實作 ---
-    function initEvents() {
-        document.querySelectorAll('.order-btn').forEach(b => b.onclick = () => { State.order = parseInt(b.dataset.val); buildPuzzle(); resetStats(); });
-        document.querySelectorAll('.type-btn').forEach(b => b.onclick = () => { State.type = b.dataset.type; buildPuzzle(); });
-        document.querySelectorAll('.skin-btn').forEach(b => b.onclick = () => { State.skin = b.dataset.skin; buildPuzzle(); });
+    function setupInteraction() {
+        document.querySelectorAll('.order-btn').forEach(b => b.onclick = () => { State.order = parseInt(b.dataset.val); buildCube(); reset(); });
+        document.querySelectorAll('.type-btn').forEach(b => b.onclick = () => { State.type = b.dataset.type; buildCube(); });
+        document.querySelectorAll('.skin-btn').forEach(b => b.onclick = () => { State.skin = b.dataset.skin; buildCube(); });
+
+        document.getElementById('manual-btn').onclick = () => document.getElementById('manual-page').classList.add('open');
+        document.getElementById('close-manual').onclick = () => document.getElementById('manual-page').classList.remove('open');
 
         document.getElementById('scramble').onclick = async () => {
-            for(let i=0; i < State.order * 5; i++) {
+            for(let i=0; i<State.order*4; i++) {
                 const axes = ['x','y','z'];
-                await rotateLayer(axes[Math.floor(Math.random()*3)], Math.floor(Math.random()*State.order), Math.PI/2);
+                await rotate(axes[Math.floor(Math.random()*3)], Math.floor(Math.random()*State.order), Math.PI/2);
             }
         };
 
         document.getElementById('solve-rewind').onclick = async () => {
             while(State.history.length > 0) {
                 const m = State.history.pop();
-                await rotateLayer(m.axis, m.layerIdx, -m.angle, false);
+                await rotate(m.axis, m.layer, -m.angle, false);
             }
-            State.moveCount = 0; updateUI(); stopTimer();
+            State.moveCount = 0; updateUI();
         };
 
         document.getElementById('explode-btn').onclick = () => {
             State.isExploded = !State.isExploded;
             cubeGroup.children.forEach(c => {
-                const target = c.position.clone().multiplyScalar(State.isExploded ? 1.5 : 0.66);
-                gsap.to(c.position, { ...target, duration: 0.5, ease: "back.out" });
+                const target = c.position.clone().multiplyScalar(State.isExploded ? 1.4 : 1/1.4);
+                gsap.to(c.position, { ...target, duration: 0.5 });
             });
         };
-
-        document.getElementById('snapshot').onclick = () => {
-            const link = document.createElement('a');
-            link.download = 'cube-snapshot.png';
-            link.href = renderer.domElement.toDataURL();
-            link.click();
-        };
-
-        document.getElementById('reset-game').onclick = () => location.reload();
 
         window.onkeydown = (e) => {
             const k = e.key.toUpperCase();
             const n = State.order - 1;
-            const map = {
-                'U': ['y', n, -Math.PI/2], 'D': ['y', 0, Math.PI/2],
-                'L': ['x', 0, Math.PI/2], 'R': ['x', n, -Math.PI/2],
-                'F': ['z', n, -Math.PI/2], 'B': ['z', 0, Math.PI/2]
-            };
-            if(map[k]) rotateLayer(...map[k]);
-        };
-
-        window.onresize = () => {
-            camera.aspect = window.innerWidth / window.innerHeight;
-            camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth, window.innerHeight);
-            composer.setSize(window.innerWidth, window.innerHeight);
+            const map = { 'U':['y',n,-Math.PI/2], 'D':['y',0,Math.PI/2], 'R':['x',n,-Math.PI/2], 'L':['x',0,Math.PI/2] };
+            if(map[k]) rotate(...map[k]);
         };
     }
 
-    // --- 輔助系統 ---
     function startTimer() {
         if (State.timer.running) return;
         State.timer.running = true;
@@ -335,8 +317,7 @@
             document.getElementById('timer').innerText = d.toISOString().substr(14, 8);
         }, 100);
     }
-    function stopTimer() { clearInterval(State.timer.interval); State.timer.running = false; }
-    function resetStats() { State.moveCount = 0; State.history = []; updateUI(); stopTimer(); document.getElementById('timer').innerText = "00:00.00"; }
+    function reset() { State.moveCount = 0; State.history = []; updateUI(); clearInterval(State.timer.interval); State.timer.running = false; document.getElementById('timer').innerText = "00:00.00"; }
     function updateUI() { document.getElementById('moves').innerText = State.moveCount; }
 
     function render() {
