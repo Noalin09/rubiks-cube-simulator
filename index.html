@@ -3,111 +3,78 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Rubik's Universe Lab - Professional Simulator</title>
+    <title>Rubik's Mobile Pro - 觸控手勢版</title>
     <style>
-        :root { --primary: #00f2ff; --accent: #7000ff; --bg: #020617; --panel: rgba(15, 23, 42, 0.95); }
-        body { margin: 0; overflow: hidden; background: var(--bg); color: #fff; font-family: 'Segoe UI', system-ui, sans-serif; }
-        canvas { display: block; touch-action: none; }
+        :root { --primary: #00f2ff; --bg: #020617; --panel: rgba(15, 23, 42, 0.9); }
+        body { margin: 0; overflow: hidden; background: var(--bg); color: #fff; font-family: sans-serif; touch-action: none; }
+        canvas { display: block; }
 
-        /* UI Dashboard */
-        #gui-container { position: absolute; inset: 0; pointer-events: none; padding: 20px; display: flex; flex-direction: column; justify-content: space-between; }
-        .panel { pointer-events: auto; background: var(--panel); backdrop-filter: blur(15px); border: 1px solid rgba(0, 242, 255, 0.2); border-radius: 12px; padding: 15px; box-shadow: 0 0 30px rgba(0,0,0,0.5); }
+        /* UI 佈局 */
+        #app-ui { position: absolute; inset: 0; pointer-events: none; display: flex; flex-direction: column; justify-content: space-between; padding: 15px; }
+        .panel { pointer-events: auto; background: var(--panel); backdrop-filter: blur(10px); border-radius: 12px; padding: 12px; border: 1px solid rgba(0, 242, 255, 0.2); }
         
-        .side-bar { width: 200px; display: flex; flex-direction: column; gap: 8px; max-height: 85vh; overflow-y: auto; }
-        h3 { font-size: 10px; text-transform: uppercase; letter-spacing: 1.5px; color: #64748b; margin: 8px 0 4px 0; }
-        .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 5px; }
-        
-        button { background: #1e293b; border: 1px solid #334155; color: #fff; padding: 8px; border-radius: 6px; cursor: pointer; font-size: 11px; transition: 0.2s; }
-        button:hover { background: var(--primary); color: #000; }
-        button.active { background: var(--primary); color: #000; box-shadow: 0 0 10px var(--primary); }
-        
-        .action-btn { background: linear-gradient(135deg, #00f2ff, #0062ff); font-weight: bold; border: none; margin-top: 5px; width: 100%; }
-        
-        /* 說明書頁面 (Manual) */
-        #manual-btn { position: absolute; bottom: 20px; right: 20px; width: 50px; height: 50px; border-radius: 25px; font-size: 20px; pointer-events: auto; background: var(--primary); color: #000; border: none; font-weight: bold; cursor: pointer; z-index: 100; }
-        #manual-page { position: absolute; top: 0; right: -400px; width: 350px; height: 100vh; background: var(--panel); backdrop-filter: blur(20px); border-left: 1px solid var(--primary); padding: 30px; box-sizing: border-box; transition: 0.4s cubic-bezier(0.19, 1, 0.22, 1); pointer-events: auto; z-index: 99; overflow-y: auto; }
-        #manual-page.open { right: 0; }
-        .manual-content h2 { color: var(--primary); border-bottom: 2px solid var(--primary); padding-bottom: 10px; }
-        .manual-content ul { padding-left: 20px; font-size: 13px; line-height: 1.6; color: #cbd5e1; }
-        .manual-content b { color: var(--primary); }
+        /* 頂部資訊 */
+        .header { display: flex; justify-content: space-between; align-items: center; }
+        .timer { font-size: 24px; font-weight: bold; color: var(--primary); font-family: monospace; }
 
-        .timer { font-size: 28px; font-weight: bold; color: var(--primary); font-family: monospace; }
-        .stats { position: absolute; top: 20px; right: 20px; text-align: right; }
+        /* 側邊控制欄 */
+        .controls { width: 140px; display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
+        h4 { margin: 0; font-size: 10px; color: #64748b; text-transform: uppercase; }
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; }
+        
+        button { background: #1e293b; border: 1px solid #334155; color: #fff; padding: 10px 5px; border-radius: 6px; cursor: pointer; font-size: 11px; transition: 0.2s; -webkit-tap-highlight-color: transparent; }
+        button:active { background: var(--primary); color: #000; }
+        button.active { background: var(--primary); color: #000; }
+        .action-btn { background: var(--primary); color: #000; font-weight: bold; border: none; }
+
+        /* 底部提示 */
+        .footer { text-align: center; font-size: 11px; color: rgba(255,255,255,0.5); }
+
+        /* 說明書 */
+        #manual { position: absolute; top: 0; left: -100%; width: 80%; height: 100%; background: var(--panel); z-index: 1000; transition: 0.4s; padding: 30px; box-sizing: border-box; pointer-events: auto; border-right: 1px solid var(--primary); }
+        #manual.open { left: 0; }
     </style>
 </head>
 <body>
 
-<div id="gui-container">
-    <div class="side-bar panel">
-        <h3>結構類型</h3>
-        <div class="grid">
-            <button class="type-btn active" data-type="cube">經典模式</button>
-            <button class="type-btn" data-type="mirror">鏡面異形</button>
-            <button class="type-btn" data-type="void">空心結構</button>
-            <button class="type-btn" data-type="ghost">幽靈模式</button>
+<div id="app-ui">
+    <div class="header">
+        <div class="panel">
+            <div class="timer" id="timer">00:00.0</div>
         </div>
-        
-        <h3>階數設定</h3>
-        <div class="grid">
-            <button class="order-btn" data-val="2">2x2</button>
-            <button class="order-btn active" data-val="3">3x3</button>
-            <button class="order-btn" data-val="4">4x4</button>
-            <button class="order-btn" data-val="7">7x7</button>
-        </div>
-
-        <h3>材質外觀</h3>
-        <div class="grid">
-            <button class="skin-btn active" data-skin="neon">霓虹</button>
-            <button class="skin-btn" data-skin="glass">玻璃</button>
-            <button class="skin-btn" data-skin="metal">黑金</button>
-        </div>
-
-        <h3>快速動作</h3>
-        <button id="scramble" class="action-btn">隨機打亂</button>
-        <button id="solve-rewind">時間回溯還原</button>
-        <button id="explode-btn">爆炸視圖開關</button>
-        <button id="undo-btn">悔步 (Undo)</button>
+        <button class="panel" style="padding: 10px 20px;" onclick="toggleManual()">?</button>
     </div>
 
-    <div class="stats panel">
-        <div class="timer" id="timer">00:00.00</div>
-        <div style="font-size: 12px; opacity: 0.7;">MOVES: <span id="moves">0</span></div>
+    <div class="controls panel">
+        <h4>階數</h4>
+        <div class="grid">
+            <button class="ord-btn" data-val="2">2x2</button>
+            <button class="ord-btn active" data-val="3">3x3</button>
+            <button class="ord-btn" data-val="4">4x4</button>
+            <button class="ord-btn" data-val="5">5x5</button>
+        </div>
+        <h4>模式</h4>
+        <div class="grid">
+            <button class="type-btn active" data-type="cube">經典</button>
+            <button class="type-btn" data-type="mirror">鏡面</button>
+        </div>
+        <button id="scramble" class="action-btn">自動打亂</button>
+        <button id="undo" style="width:100%">悔步 (Undo)</button>
+    </div>
+
+    <div class="footer">
+        滑動方塊表面來轉動層級 | 點擊空白處旋轉視角
     </div>
 </div>
 
-<button id="manual-btn">?</button>
-
-<div id="manual-page">
-    <div class="manual-content">
-        <h2>實驗室操作手冊</h2>
-        <p>歡迎使用終極魔術方塊引擎，以下是 100+ 功能的操作指引：</p>
-        
-        <h3>1. 基礎轉動 (Keyboard)</h3>
-        <ul>
-            <li><b>U / D</b>: 頂層 / 底層旋轉</li>
-            <li><b>L / R</b>: 左層 / 右層旋轉</li>
-            <li><b>F / B</b>: 前層 / 後層旋轉</li>
-            <li><b>Shift + 按鍵</b>: 逆時針旋轉</li>
-        </ul>
-
-        <h3>2. 高階功能 (Features)</h3>
-        <ul>
-            <li><b>鏡面模式</b>: 塊體大小隨座標改變，形狀會隨旋轉而崩潰。</li>
-            <li><b>空心模式</b>: 移除中心軸，考驗空間對齊邏輯。</li>
-            <li><b>幽靈模式</b>: 方塊具有初始相位偏移，極難對齊。</li>
-            <li><b>時間回溯</b>: 引擎會倒序播放所有歷史動作直到初始狀態。</li>
-            <li><b>爆炸視圖</b>: 分離所有小塊，檢查內部 PBR 渲染結構。</li>
-        </ul>
-
-        <h3>3. 系統優化 (Fixed)</h3>
-        <ul>
-            <li><b>自動校準</b>: 修正了旋轉後的浮點數漂移。</li>
-            <li><b>垃圾回收</b>: 切換階數時自動釋放顯存資源。</li>
-            <li><b>物理特效</b>: 整合了 Unreal Bloom 發光與金屬反射。</li>
-        </ul>
-        
-        <button id="close-manual" style="width:100%; margin-top:20px;">關閉說明書</button>
-    </div>
+<div id="manual">
+    <h2 style="color: var(--primary);">操作說明 (Manual)</h2>
+    <ul>
+        <li><b>手機操作：</b>直接在方塊表面「滑動」即可撥動該層。在背景滑動可旋轉視角。</li>
+        <li><b>鏡面模式：</b>方塊形狀會隨旋轉改變，極具挑戰性。</li>
+        <li><b>自動校準：</b>引擎會在旋轉結束後自動對齊網格，防止誤差。</li>
+    </ul>
+    <button onclick="toggleManual()" style="width:100%; margin-top:20px;">關閉</button>
 </div>
 
 <script type="importmap">
@@ -123,25 +90,20 @@
 <script type="module">
     import * as THREE from 'three';
     import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-    import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
-    import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
-    import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
     import gsap from 'gsap';
 
-    // --- 核心系統管理 ---
-    const State = {
-        order: 3, type: 'cube', skin: 'neon',
-        isAnimating: false, isExploded: false,
-        moveCount: 0, history: [],
-        timer: { start: 0, interval: null, running: false }
-    };
+    let scene, camera, renderer, controls, cubeGroup;
+    let order = 3, type = 'cube';
+    let isAnimating = false, history = [];
+    let startTime, timerInt, isTimerRunning = false;
 
-    const COLORS = { 
-        top: 0xffff00, bottom: 0xffffff, front: 0xff0000, 
-        back: 0xffa500, left: 0x0000ff, right: 0x00ff00, inner: 0x0a0a0a 
-    };
-
-    let scene, camera, renderer, controls, composer, cubeGroup;
+    // 觸控互動相關變數
+    const raycaster = new THREE.Raycaster();
+    const mouse = new THREE.Vector2();
+    let isDraggingLayer = false;
+    let dragStartPos = new THREE.Vector2();
+    let intersectCubie = null;
+    let intersectNormal = null;
 
     init();
     render();
@@ -151,59 +113,52 @@
         scene.background = new THREE.Color(0x020617);
 
         camera = new THREE.PerspectiveCamera(45, window.innerWidth/window.innerHeight, 0.1, 1000);
-        camera.position.set(6, 6, 10);
+        camera.position.set(order*2, order*2, order*3);
 
         renderer = new THREE.WebGLRenderer({ antialias: true });
         renderer.setSize(window.innerWidth, window.innerHeight);
-        renderer.setPixelRatio(window.devicePixelRatio);
-        renderer.toneMapping = THREE.ReinhardToneMapping;
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)); // 兼顧效能
         document.body.appendChild(renderer.domElement);
-
-        // 發光特效優化
-        const renderPass = new RenderPass(scene, camera);
-        const bloomPass = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 1.0, 0.4, 0.85);
-        composer = new EffectComposer(renderer);
-        composer.addPass(renderPass);
-        composer.addPass(bloomPass);
 
         controls = new OrbitControls(camera, renderer.domElement);
         controls.enableDamping = true;
+        controls.rotateSpeed = 0.8;
 
-        const amb = new THREE.AmbientLight(0xffffff, 0.8);
-        scene.add(amb);
-        const sun = new THREE.PointLight(0xffffff, 1.5);
-        sun.position.set(10, 10, 10);
-        scene.add(sun);
+        scene.add(new THREE.AmbientLight(0xffffff, 1.2));
+        const light = new THREE.DirectionalLight(0xffffff, 1.0);
+        light.position.set(10, 20, 10);
+        scene.add(light);
 
         buildCube();
-        setupInteraction();
+        setupInput();
     }
 
     function buildCube() {
-        if (cubeGroup) {
-            cubeGroup.children.forEach(c => { c.geometry.dispose(); c.material.forEach(m => m.dispose()); });
-            scene.remove(cubeGroup);
-        }
+        if (cubeGroup) scene.remove(cubeGroup);
         cubeGroup = new THREE.Group();
-        const n = State.order;
-        const offset = (n - 1) / 2;
+        const offset = (order - 1) / 2;
+        const colors = [0x00ff00, 0x0000ff, 0xffff00, 0xffffff, 0xff0000, 0xffa500];
 
-        for (let x=0; x<n; x++) {
-            for (let y=0; y<n; y++) {
-                for (let z=0; z<n; z++) {
-                    // 空心邏輯判定
-                    if (State.type === 'void' && isCenter(x,y,z,n)) continue;
-
-                    const geom = (State.type === 'mirror') ? 
-                        new THREE.BoxGeometry(0.5 + x*0.3, 0.5 + y*0.3, 0.5 + z*0.3) :
+        for (let x=0; x<order; x++) {
+            for (let y=0; y<order; y++) {
+                for (let z=0; z<order; z++) {
+                    const geom = (type === 'mirror') ? 
+                        new THREE.BoxGeometry(0.5+x*0.3, 0.5+y*0.3, 0.5+z*0.3) :
                         new THREE.BoxGeometry(0.96, 0.96, 0.96);
 
-                    const mats = createComplexMaterial(x, y, z, n);
+                    const mats = colors.map((c, i) => {
+                        let isFace = false;
+                        if(i===0 && x===order-1) isFace = true;
+                        if(i===1 && x===0) isFace = true;
+                        if(i===2 && y===order-1) isFace = true;
+                        if(i===3 && y===0) isFace = true;
+                        if(i===4 && z===order-1) isFace = true;
+                        if(i===5 && z===0) isFace = true;
+                        return new THREE.MeshStandardMaterial({ color: isFace ? c : 0x111111, roughness: 0.1 });
+                    });
+
                     const cubie = new THREE.Mesh(geom, mats);
-                    cubie.position.set(x - offset, y - offset, z - offset);
-                    
-                    if (State.type === 'ghost') cubie.rotation.set(Math.PI/6, 0, Math.PI/12);
-                    
+                    cubie.position.set(x-offset, y-offset, z-offset);
                     cubeGroup.add(cubie);
                 }
             }
@@ -211,120 +166,8 @@
         scene.add(cubeGroup);
     }
 
-    function isCenter(x,y,z,n) {
-        if (n < 3) return false;
-        const mid = (v) => v > 0 && v < n-1;
-        return (mid(x) && mid(y)) || (mid(x) && mid(z)) || (mid(y) && mid(z));
-    }
-
-    function createComplexMaterial(x,y,z,n) {
-        const check = (cond, col) => cond ? col : COLORS.inner;
-        const faces = [
-            check(x===n-1, COLORS.right), check(x===0, COLORS.left),
-            check(y===n-1, COLORS.top), check(y===0, COLORS.bottom),
-            check(z===n-1, COLORS.front), check(z===0, COLORS.back)
-        ];
-        return faces.map(c => new THREE.MeshStandardMaterial({
-            color: c,
-            roughness: State.skin === 'metal' ? 0.1 : 0.4,
-            metalness: State.skin === 'metal' ? 0.8 : 0.1,
-            transparent: State.skin === 'glass',
-            opacity: State.skin === 'glass' ? 0.6 : 1.0,
-            emissive: State.skin === 'neon' ? c : 0,
-            emissiveIntensity: State.skin === 'neon' ? 0.3 : 0
-        }));
-    }
-
-    async function rotate(axis, layer, angle, record = true) {
-        if (State.isAnimating) return;
-        State.isAnimating = true;
-        startTimer();
-
-        const pivot = new THREE.Group();
-        scene.add(pivot);
-        const target = layer - (State.order-1)/2;
-        
-        const targets = [];
-        [...cubeGroup.children].forEach(c => {
-            if (Math.abs(c.position[axis] - target) < 0.2) { // 增強判定區間修正 Bug
-                targets.push(c);
-                pivot.attach(c);
-            }
-        });
-
-        await gsap.to(pivot.rotation, { [axis]: angle, duration: 0.3, ease: "power2.inOut" });
-
-        targets.forEach(c => {
-            cubeGroup.attach(c);
-            // 修正座標漂移 Bug
-            c.position.set(Math.round(c.position.x*2)/2, Math.round(c.position.y*2)/2, Math.round(c.position.z*2)/2);
-            c.rotation.set(
-                Math.round(c.rotation.x/(Math.PI/2))*Math.PI/2,
-                Math.round(c.rotation.y/(Math.PI/2))*Math.PI/2,
-                Math.round(c.rotation.z/(Math.PI/2))*Math.PI/2
-            );
-        });
-        scene.remove(pivot);
-        if (record) { State.history.push({axis, layer, angle}); State.moveCount++; updateUI(); }
-        State.isAnimating = false;
-    }
-
-    function setupInteraction() {
-        document.querySelectorAll('.order-btn').forEach(b => b.onclick = () => { State.order = parseInt(b.dataset.val); buildCube(); reset(); });
-        document.querySelectorAll('.type-btn').forEach(b => b.onclick = () => { State.type = b.dataset.type; buildCube(); });
-        document.querySelectorAll('.skin-btn').forEach(b => b.onclick = () => { State.skin = b.dataset.skin; buildCube(); });
-
-        document.getElementById('manual-btn').onclick = () => document.getElementById('manual-page').classList.add('open');
-        document.getElementById('close-manual').onclick = () => document.getElementById('manual-page').classList.remove('open');
-
-        document.getElementById('scramble').onclick = async () => {
-            for(let i=0; i<State.order*4; i++) {
-                const axes = ['x','y','z'];
-                await rotate(axes[Math.floor(Math.random()*3)], Math.floor(Math.random()*State.order), Math.PI/2);
-            }
-        };
-
-        document.getElementById('solve-rewind').onclick = async () => {
-            while(State.history.length > 0) {
-                const m = State.history.pop();
-                await rotate(m.axis, m.layer, -m.angle, false);
-            }
-            State.moveCount = 0; updateUI();
-        };
-
-        document.getElementById('explode-btn').onclick = () => {
-            State.isExploded = !State.isExploded;
-            cubeGroup.children.forEach(c => {
-                const target = c.position.clone().multiplyScalar(State.isExploded ? 1.4 : 1/1.4);
-                gsap.to(c.position, { ...target, duration: 0.5 });
-            });
-        };
-
-        window.onkeydown = (e) => {
-            const k = e.key.toUpperCase();
-            const n = State.order - 1;
-            const map = { 'U':['y',n,-Math.PI/2], 'D':['y',0,Math.PI/2], 'R':['x',n,-Math.PI/2], 'L':['x',0,Math.PI/2] };
-            if(map[k]) rotate(...map[k]);
-        };
-    }
-
-    function startTimer() {
-        if (State.timer.running) return;
-        State.timer.running = true;
-        State.timer.start = Date.now();
-        State.timer.interval = setInterval(() => {
-            const d = new Date(Date.now() - State.timer.start);
-            document.getElementById('timer').innerText = d.toISOString().substr(14, 8);
-        }, 100);
-    }
-    function reset() { State.moveCount = 0; State.history = []; updateUI(); clearInterval(State.timer.interval); State.timer.running = false; document.getElementById('timer').innerText = "00:00.00"; }
-    function updateUI() { document.getElementById('moves').innerText = State.moveCount; }
-
-    function render() {
-        requestAnimationFrame(render);
-        controls.update();
-        composer.render();
-    }
-</script>
-</body>
-</html>
+    // --- 核心互動邏輯：手機觸控轉動 ---
+    function setupInput() {
+        const onDown = (e) => {
+            if (isAnimating) return;
+            const x = e.touches ? e.touches[0].clientX
